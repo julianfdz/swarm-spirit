@@ -81,7 +81,7 @@ const DaemonView = () => {
         <p className="text-sm text-muted-foreground mb-6">{daemon.role} · Last run: {daemon.lastRun}</p>
 
         {/* Tabs */}
-        <div className="flex gap-0 border-b border-border mb-6 overflow-x-auto">
+        <div className="flex gap-0 border-b border-border mb-6 shrink-0">
           {tabs.map((t) => (
             <button
               key={t.key}
