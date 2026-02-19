@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { swarms, DaemonStatus } from "@/data/mockData";
 import { Play, Square, RotateCw, Send } from "lucide-react";
 
-type Tab = "prompting" | "logs" | "chat" | "status";
+type Tab = "prompting" | "logs" | "chat" | "status" | "sigil";
 
 const DaemonView = () => {
   const { swarmId, daemonId } = useParams();
@@ -42,7 +42,55 @@ const DaemonView = () => {
     { key: "logs", label: "Logs" },
     { key: "chat", label: "Chat" },
     { key: "status", label: "Estado" },
+    { key: "sigil", label: "Sigil" },
   ];
+
+  const sigil = {
+    sigil_version: "1.0.0",
+    meta: {
+      name: daemon.name,
+      id: daemon.id,
+      role: daemon.role,
+      version: "1.0.0",
+      author: "swarm-orchestrator",
+      description: `Daemon agent "${daemon.name}" operating as ${daemon.role} within swarm "${swarm.name}".`,
+      created_at: "2026-01-15T08:00:00Z",
+      updated_at: "2026-02-19T10:00:00Z",
+      swarm_id: swarm.id,
+      swarm_name: swarm.name,
+      tags: [daemon.role.toLowerCase().replace(/\s+/g, "-"), swarm.id],
+    },
+    runtime: {
+      status: localStatus,
+      last_run: daemon.lastRun,
+      schedule: localStatus === "sleeping" ? "on-demand / triggered" : "continuous",
+      max_retries: 3,
+      timeout_seconds: 120,
+      concurrency: 1,
+    },
+    prompts: {
+      system_prompt: daemon.prompt,
+      user_prompt: null,
+      temperature: 0.7,
+      model: "gpt-4o",
+      max_tokens: 2048,
+    },
+    structured_output: {
+      enabled: !!daemon.structuredOutput,
+      schema: daemon.structuredOutput ? JSON.parse(daemon.structuredOutput) : null,
+    },
+    capabilities: {
+      can_chat: true,
+      can_stream: false,
+      has_memory: false,
+      tools: [],
+    },
+    logging: {
+      level: "info",
+      total_entries: daemon.logs.length,
+      last_entry: daemon.logs.length > 0 ? daemon.logs[daemon.logs.length - 1] : null,
+    },
+  };
 
   const handleSendChat = () => {
     if (!chatInput.trim()) return;
@@ -174,6 +222,20 @@ const DaemonView = () => {
                 >
                   <Send className="h-4 w-4" />
                 </button>
+              </div>
+            </div>
+          )}
+
+          {tab === "sigil" && (
+            <div>
+              <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-primary mb-3">Sigil · Agent Blueprint</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Raw JSON definition of this daemon. The Sigil contains all metadata, runtime config, prompts, and structured output schemas.
+              </p>
+              <div className="rounded-md neon-border bg-card p-4 overflow-x-auto">
+                <pre className="font-mono-cyber text-xs leading-relaxed text-foreground/80 whitespace-pre">
+{JSON.stringify(sigil, null, 2)}
+                </pre>
               </div>
             </div>
           )}
