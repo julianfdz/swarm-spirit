@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Cpu, Zap, Network } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -13,12 +14,15 @@ const Landing = () => {
             NetherNet
           </h1>
         </div>
-        <button
-          onClick={() => navigate("/app")}
-          className="rounded-md bg-primary px-5 py-2 font-mono-cyber text-sm text-primary-foreground transition-all hover:neon-glow"
-        >
-          Login →
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => navigate("/app")}
+            className="rounded-md bg-primary px-5 py-2 font-mono-cyber text-sm text-primary-foreground transition-all hover:neon-glow"
+          >
+            Login →
+          </button>
+        </div>
       </header>
 
       {/* Hero */}
