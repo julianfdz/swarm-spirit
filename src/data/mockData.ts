@@ -15,6 +15,12 @@ export interface LogEntry {
   message: string;
 }
 
+export interface ChatMessage {
+  role: "user" | "daemon";
+  message: string;
+  timestamp: string;
+}
+
 export interface Daemon {
   id: string;
   name: string;
@@ -22,9 +28,10 @@ export interface Daemon {
   status: DaemonStatus;
   avatar: string;
   prompt: string;
-  structuredOutput: boolean;
+  structuredOutput: string | null; // JSON schema string or null
   lastRun: string;
   logs: LogEntry[];
+  chat: ChatMessage[];
 }
 
 export interface Swarm {
@@ -130,6 +137,116 @@ const modLogs: LogEntry[] = [
   { timestamp: "2026-02-19 09:35:01", level: "error", message: "Daemon detenido. Requiere intervención manual." },
 ];
 
+const scraperChat: ChatMessage[] = [
+  { role: "user", timestamp: "10:30", message: "¿Cuántas noticias has encontrado en el último ciclo?" },
+  { role: "daemon", timestamp: "10:30", message: "En el último ciclo he encontrado 24 artículos en total, de los cuales 4 pasaron el filtro de relevancia para Alcantarilla (score > 0.7). Las fuentes fueron La Verdad (2), Murcia Diario (1) y 20 Minutos Murcia (1)." },
+  { role: "user", timestamp: "10:31", message: "¿Puedes bajar el threshold de relevancia a 0.5?" },
+  { role: "daemon", timestamp: "10:31", message: "Entendido. Ajusto el relevance_score threshold a 0.5. Con ese umbral, el último ciclo habría devuelto 9 noticias en lugar de 4. ¿Confirmo el cambio?" },
+  { role: "user", timestamp: "10:32", message: "Sí, confirma." },
+  { role: "daemon", timestamp: "10:32", message: "Threshold actualizado a 0.5. Se aplicará en el próximo ciclo (en ~18 min)." },
+];
+
+const writerChat: ChatMessage[] = [
+  { role: "user", timestamp: "10:35", message: "¿Qué tono estás usando para los artículos?" },
+  { role: "daemon", timestamp: "10:35", message: "Estoy usando un tono periodístico neutro, cercano y local. Evito sensacionalismo y priorizo claridad. Los artículos tienen entre 300-600 palabras con titular SEO optimizado." },
+  { role: "user", timestamp: "10:36", message: "Perfecto, sigue así." },
+];
+
+const publisherChat: ChatMessage[] = [
+  { role: "user", timestamp: "10:40", message: "¿Cuántos artículos has publicado hoy?" },
+  { role: "daemon", timestamp: "10:40", message: "Hoy he publicado 12 artículos. 8 programados por la mañana y 4 para la franja de tarde (14:00-18:00). No se detectaron duplicados." },
+];
+
+const devChat: ChatMessage[] = [
+  { role: "user", timestamp: "08:05", message: "¿Algún problema detectado?" },
+  { role: "daemon", timestamp: "08:05", message: "He detectado 2 warnings de memoria en las últimas 6 horas pero nada crítico. El sitio responde en 340ms de media. Todas las dependencias están actualizadas." },
+  { role: "user", timestamp: "08:06", message: "Monitoriza la memoria más de cerca." },
+  { role: "daemon", timestamp: "08:06", message: "Entendido. Incremento la frecuencia de checks de memoria a cada 30 minutos y estableceré una alerta si supera el 80% de uso." },
+];
+
+const defaultChat: ChatMessage[] = [
+  { role: "user", timestamp: "09:00", message: "¿Todo bien?" },
+  { role: "daemon", timestamp: "09:00", message: "Operando con normalidad. Sin incidencias." },
+];
+
+const scraperSchema = `{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "title": { "type": "string" },
+      "body": { "type": "string" },
+      "source": { "type": "string" },
+      "date": { "type": "string", "format": "date-time" },
+      "relevance_score": { "type": "number", "min": 0, "max": 1 },
+      "url": { "type": "string", "format": "uri" },
+      "category": { "type": "string", "enum": ["local", "politica", "deportes", "cultura", "economia"] }
+    },
+    "required": ["title", "body", "source", "date", "relevance_score"]
+  }
+}`;
+
+const publisherSchema = `{
+  "type": "object",
+  "properties": {
+    "article_id": { "type": "number" },
+    "slug": { "type": "string" },
+    "category": { "type": "string" },
+    "published_at": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["published", "scheduled", "draft"] },
+    "telegram_notified": { "type": "boolean" }
+  },
+  "required": ["article_id", "slug", "status"]
+}`;
+
+const analystSchema = `{
+  "type": "object",
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "total_tickets": { "type": "number" },
+    "by_category": { "type": "object" },
+    "trends": { "type": "array", "items": { "type": "string" } },
+    "recommendations": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["date", "total_tickets", "by_category"]
+}`;
+
+const schedulerSchema = `{
+  "type": "object",
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "expected_volume": { "type": "number" },
+    "shifts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "period": { "type": "string", "enum": ["morning", "afternoon", "night"] },
+          "agents": { "type": "number" }
+        }
+      }
+    }
+  },
+  "required": ["date", "shifts"]
+}`;
+
+const metricsSchema = `{
+  "type": "object",
+  "properties": {
+    "period": { "type": "string" },
+    "platforms": {
+      "type": "object",
+      "properties": {
+        "twitter": { "type": "object" },
+        "instagram": { "type": "object" },
+        "linkedin": { "type": "object" }
+      }
+    },
+    "overall_engagement_delta": { "type": "string" }
+  },
+  "required": ["period", "platforms"]
+}`;
+
 export const swarms: Swarm[] = [
   {
     id: "diario-ia-alcantarilla",
@@ -139,48 +256,32 @@ export const swarms: Swarm[] = [
     activeCount: 3,
     daemons: [
       {
-        id: "scraper-noticias",
-        name: "scraper-noticias",
-        role: "News Scraper",
-        status: "running",
-        avatar: daemonScraper,
-        structuredOutput: true,
+        id: "scraper-noticias", name: "scraper-noticias", role: "News Scraper",
+        status: "running", avatar: daemonScraper,
+        structuredOutput: scraperSchema,
         prompt: "Eres un agente scraper especializado en noticias locales de Alcantarilla, Murcia. Tu trabajo es monitorear fuentes RSS, portales de noticias regionales (La Verdad, Murcia Diario, etc.) y redes sociales locales. Extraes titulares, cuerpo de noticia, fecha y fuente. Filtras por relevancia para Alcantarilla y su comarca. Ejecutas cada 30 minutos. Formato de salida: JSON estructurado con campos title, body, source, date, relevance_score.",
-        lastRun: "Hace 12 min",
-        logs: scraperLogs,
+        lastRun: "Hace 12 min", logs: scraperLogs, chat: scraperChat,
       },
       {
-        id: "redactor-articulos",
-        name: "redactor-articulos",
-        role: "Article Writer",
-        status: "running",
-        avatar: daemonWriter,
-        structuredOutput: false,
+        id: "redactor-articulos", name: "redactor-articulos", role: "Article Writer",
+        status: "running", avatar: daemonWriter,
+        structuredOutput: null,
         prompt: "Eres un periodista digital IA. Recibes noticias en crudo del scraper y las transformas en artículos periodísticos completos en español. Aplicas estilo periodístico neutro, verificas coherencia, añades contexto local cuando es relevante. Generas titular SEO, entradilla, cuerpo del artículo y tags. Longitud objetivo: 300-600 palabras. Tono: profesional, cercano, local.",
-        lastRun: "Hace 8 min",
-        logs: writerLogs,
+        lastRun: "Hace 8 min", logs: writerLogs, chat: writerChat,
       },
       {
-        id: "publicador-bbdd",
-        name: "publicador-bbdd",
-        role: "Publisher",
-        status: "running",
-        avatar: daemonPublisher,
-        structuredOutput: true,
+        id: "publicador-bbdd", name: "publicador-bbdd", role: "Publisher",
+        status: "running", avatar: daemonPublisher,
+        structuredOutput: publisherSchema,
         prompt: "Eres el agente publicador. Recibes artículos terminados del redactor y los procesas para publicación. Generas slug SEO, asignas categoría, insertas en la base de datos del CMS. Verificas que no haya duplicados. Programas publicación según horario óptimo de engagement. Notificas al canal de Telegram del periódico con un resumen.",
-        lastRun: "Hace 5 min",
-        logs: publisherLogs,
+        lastRun: "Hace 5 min", logs: publisherLogs, chat: publisherChat,
       },
       {
-        id: "dev-mantenimiento",
-        name: "dev-mantenimiento",
-        role: "Programmer",
-        status: "sleeping",
-        avatar: daemonProgrammer,
-        structuredOutput: false,
+        id: "dev-mantenimiento", name: "dev-mantenimiento", role: "Programmer",
+        status: "sleeping", avatar: daemonProgrammer,
+        structuredOutput: null,
         prompt: "Eres el daemon programador de mantenimiento del Diario IA. Monitorizas el estado del sitio web, verificas que las páginas cargan correctamente, revisas los logs de error del servidor. Cuando detectas un problema, generas un informe técnico y propones un fix. También te encargas de actualizar dependencias y optimizar queries de la BBDD. Te activas cada 6 horas o ante alertas críticas.",
-        lastRun: "Hace 2h",
-        logs: devLogs,
+        lastRun: "Hace 2h", logs: devLogs, chat: devChat,
       },
     ],
   },
@@ -192,37 +293,25 @@ export const swarms: Swarm[] = [
     activeCount: 2,
     daemons: [
       {
-        id: "soporte-chat",
-        name: "soporte-chat",
-        role: "Support Agent",
-        status: "running",
-        avatar: daemonSupport,
-        structuredOutput: false,
+        id: "soporte-chat", name: "soporte-chat", role: "Support Agent",
+        status: "running", avatar: daemonSupport,
+        structuredOutput: null,
         prompt: "Eres un agente de soporte al cliente de primer nivel. Respondes consultas frecuentes, clasificas tickets por urgencia y tema, y escalas a humanos cuando es necesario. Tono amable y profesional. Respuesta máxima: 3 párrafos.",
-        lastRun: "Hace 1 min",
-        logs: supportLogs,
+        lastRun: "Hace 1 min", logs: supportLogs, chat: defaultChat,
       },
       {
-        id: "analista-tickets",
-        name: "analista-tickets",
-        role: "Ticket Analyst",
-        status: "running",
-        avatar: daemonAnalyst,
-        structuredOutput: true,
+        id: "analista-tickets", name: "analista-tickets", role: "Ticket Analyst",
+        status: "running", avatar: daemonAnalyst,
+        structuredOutput: analystSchema,
         prompt: "Analizas todos los tickets de soporte entrantes. Generas reportes diarios de tendencias, detectas problemas recurrentes y propones mejoras al producto basándote en el feedback de los usuarios.",
-        lastRun: "Hace 15 min",
-        logs: analystLogs,
+        lastRun: "Hace 15 min", logs: analystLogs, chat: defaultChat,
       },
       {
-        id: "scheduler-turnos",
-        name: "scheduler-turnos",
-        role: "Scheduler",
-        status: "sleeping",
-        avatar: daemonScheduler,
-        structuredOutput: true,
+        id: "scheduler-turnos", name: "scheduler-turnos", role: "Scheduler",
+        status: "sleeping", avatar: daemonScheduler,
+        structuredOutput: schedulerSchema,
         prompt: "Gestionas la programación de turnos del equipo de soporte humano. Optimizas cobertura según volumen histórico de tickets. Te activas cada día a las 6:00 AM.",
-        lastRun: "Hace 18h",
-        logs: schedulerLogs,
+        lastRun: "Hace 18h", logs: schedulerLogs, chat: defaultChat,
       },
     ],
   },
@@ -234,37 +323,25 @@ export const swarms: Swarm[] = [
     activeCount: 1,
     daemons: [
       {
-        id: "content-creator",
-        name: "content-creator",
-        role: "Content Creator",
-        status: "running",
-        avatar: daemonSocial,
-        structuredOutput: false,
+        id: "content-creator", name: "content-creator", role: "Content Creator",
+        status: "running", avatar: daemonSocial,
+        structuredOutput: null,
         prompt: "Creas contenido para redes sociales (Twitter, Instagram, LinkedIn). Adaptas el tono según la plataforma. Generas copies, sugieres hashtags y propones horarios de publicación óptimos.",
-        lastRun: "Hace 30 min",
-        logs: socialLogs,
+        lastRun: "Hace 30 min", logs: socialLogs, chat: defaultChat,
       },
       {
-        id: "metrics-watcher",
-        name: "metrics-watcher",
-        role: "Metrics Analyst",
-        status: "sleeping",
-        avatar: daemonAnalyst,
-        structuredOutput: true,
+        id: "metrics-watcher", name: "metrics-watcher", role: "Metrics Analyst",
+        status: "sleeping", avatar: daemonAnalyst,
+        structuredOutput: metricsSchema,
         prompt: "Monitorizas métricas de engagement en todas las redes sociales. Generas reportes semanales de rendimiento y propones ajustes de estrategia basados en datos.",
-        lastRun: "Hace 3h",
-        logs: metricsLogs,
+        lastRun: "Hace 3h", logs: metricsLogs, chat: defaultChat,
       },
       {
-        id: "community-mod",
-        name: "community-mod",
-        role: "Moderator",
-        status: "error",
-        avatar: daemonSupport,
-        structuredOutput: false,
+        id: "community-mod", name: "community-mod", role: "Moderator",
+        status: "error", avatar: daemonSupport,
+        structuredOutput: null,
         prompt: "Moderas comentarios y mensajes en redes sociales. Detectas spam, contenido ofensivo y trolls. Respondes a menciones relevantes de la marca.",
-        lastRun: "Error: API rate limit",
-        logs: modLogs,
+        lastRun: "Error: API rate limit", logs: modLogs, chat: defaultChat,
       },
     ],
   },
