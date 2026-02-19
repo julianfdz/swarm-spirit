@@ -57,14 +57,14 @@ const DaemonView = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh)] flex-col md:flex-row overflow-hidden">
+    <div className="flex h-full flex-col md:flex-row overflow-hidden">
       {/* Left: Avatar - fixed */}
-      <div className="flex shrink-0 items-center justify-center border-b border-border bg-card p-8 md:w-1/3 md:border-b-0 md:border-r md:sticky md:top-0 md:h-screen">
+      <div className="flex shrink-0 items-center justify-center border-b border-border bg-card p-8 md:w-1/3 md:border-b-0 md:border-r">
         <img src={daemon.avatar} alt={daemon.name} className="h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
       </div>
 
-      {/* Right: Info */}
-      <div className="flex flex-1 flex-col overflow-y-auto p-6 md:p-10 md:h-screen">
+      {/* Right: Info - only this scrolls */}
+      <div className="flex flex-1 flex-col p-6 md:p-10 overflow-hidden">
         <button
           onClick={() => navigate(`/app/swarm/${swarmId}`)}
           className="mb-6 self-start font-mono-cyber text-xs text-muted-foreground hover:text-primary transition-colors"

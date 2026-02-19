@@ -5,9 +5,9 @@ import { AppSidebar } from "./AppSidebar";
 const AppLayout = () => {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background pixel-grid">
+      <div className="flex h-screen w-full bg-background pixel-grid overflow-hidden">
         <AppSidebar />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>
