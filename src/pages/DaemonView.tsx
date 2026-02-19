@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { swarms, DaemonStatus } from "@/data/mockData";
+import { swarms, DaemonStatus, SkillCategory } from "@/data/mockData";
 import { Play, Square, RotateCw, Send } from "lucide-react";
 
-type Tab = "prompting" | "logs" | "chat" | "status" | "sigil";
+type Tab = "prompting" | "logs" | "chat" | "skills" | "status" | "sigil";
 
 const DaemonView = () => {
   const { swarmId, daemonId } = useParams();
@@ -37,10 +37,20 @@ const DaemonView = () => {
     error: "text-neon-error",
   };
 
+  const skillCategoryMeta: Record<string, { label: string; color: string }> = {
+    tool_use:      { label: "Tool Use",      color: "text-neon-success border-neon-success/30 bg-neon-success/10" },
+    memory:        { label: "Memory",        color: "text-primary border-primary/30 bg-primary/10" },
+    reasoning:     { label: "Reasoning",     color: "text-neon-warning border-neon-warning/30 bg-neon-warning/10" },
+    multimodal:    { label: "Multimodal",    color: "text-[hsl(280,80%,70%)] border-[hsl(280,80%,70%)]/30 bg-[hsl(280,80%,70%)]/10" },
+    orchestration: { label: "Orchestration", color: "text-neon-error border-neon-error/30 bg-neon-error/10" },
+    retrieval:     { label: "Retrieval",     color: "text-[hsl(190,80%,60%)] border-[hsl(190,80%,60%)]/30 bg-[hsl(190,80%,60%)]/10" },
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "prompting", label: "Prompting" },
     { key: "logs", label: "Logs" },
     { key: "chat", label: "Chat" },
+    { key: "skills", label: "Skills" },
     { key: "status", label: "Estado" },
     { key: "sigil", label: "Sigil" },
   ];
@@ -223,6 +233,48 @@ const DaemonView = () => {
                   <Send className="h-4 w-4" />
                 </button>
               </div>
+            </div>
+          )}
+
+          {tab === "skills" && (
+            <div>
+              <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-primary mb-1">Skills</h3>
+              <p className="text-xs text-muted-foreground mb-5">
+                Capacidades IA activas en este daemon. Cada skill representa un mecanismo cognitivo o herramienta que el agente puede invocar durante su ejecución.
+              </p>
+
+              {daemon.skills.length === 0 ? (
+                <div className="rounded-md neon-border bg-card p-8 text-center">
+                  <p className="font-mono-cyber text-xs text-muted-foreground">Este daemon no tiene skills configuradas.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {daemon.skills.map((skill) => {
+                    const meta = skillCategoryMeta[skill.category];
+                    return (
+                      <div key={skill.id} className="rounded-md neon-border bg-card p-5">
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono-cyber text-sm text-foreground">{skill.name}</span>
+                            <span className={`rounded border px-2 py-0.5 font-mono-cyber text-[10px] uppercase tracking-wider ${meta.color}`}>
+                              {meta.label}
+                            </span>
+                          </div>
+                          <span className="shrink-0 font-mono-cyber text-xs text-muted-foreground">{skill.proficiency}%</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed mb-3">{skill.description}</p>
+                        {/* Proficiency bar */}
+                        <div className="h-1 w-full rounded-full bg-border overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${skill.proficiency}%`, opacity: 0.7 + skill.proficiency * 0.003 }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
