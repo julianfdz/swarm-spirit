@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { swarms, Daemon } from "@/data/mockData";
 import EventStream from "@/components/EventStream";
+import TaskPool from "@/components/TaskPool";
 
-type SwarmTab = "daemons" | "event-stream";
+type SwarmTab = "daemons" | "event-stream" | "task-pool";
 
 const statusBadge = (status: Daemon["status"]) => {
   const styles = {
@@ -37,6 +38,7 @@ const SwarmView = () => {
   const tabs: { key: SwarmTab; label: string }[] = [
     { key: "daemons", label: "Daemons" },
     { key: "event-stream", label: "Event Stream" },
+    { key: "task-pool", label: "Task Pool" },
   ];
 
   return (
@@ -97,6 +99,9 @@ const SwarmView = () => {
 
       {/* Event Stream */}
       {tab === "event-stream" && <EventStream swarmId={swarmId!} />}
+
+      {/* Task Pool */}
+      {tab === "task-pool" && <TaskPool swarmId={swarmId!} />}
     </main>
   );
 };
