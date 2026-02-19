@@ -21,6 +21,34 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+/**
+ * AI Skills — atomic capabilities a daemon can use.
+ *
+ * Categories:
+ *  - tool_use      : external API / tool calls (web search, code exec, browsers…)
+ *  - memory        : persistent/contextual memory mechanisms
+ *  - reasoning     : structured thinking strategies (CoT, ReAct, self-reflection…)
+ *  - multimodal    : vision, audio, file parsing beyond plain text
+ *  - orchestration : spawning sub-agents, planning or decomposing tasks
+ *  - retrieval     : RAG / vector search / semantic lookup
+ */
+export type SkillCategory =
+  | "tool_use"
+  | "memory"
+  | "reasoning"
+  | "multimodal"
+  | "orchestration"
+  | "retrieval";
+
+export interface Skill {
+  id: string;
+  name: string;
+  category: SkillCategory;
+  description: string;
+  /** 0-100: how heavily this daemon relies on this skill */
+  proficiency: number;
+}
+
 export interface Daemon {
   id: string;
   name: string;
@@ -32,6 +60,7 @@ export interface Daemon {
   lastRun: string;
   logs: LogEntry[];
   chat: ChatMessage[];
+  skills: Skill[];
 }
 
 export interface Swarm {
@@ -261,6 +290,10 @@ export const swarms: Swarm[] = [
         structuredOutput: scraperSchema,
         prompt: "Eres un agente scraper especializado en noticias locales de Alcantarilla, Murcia. Tu trabajo es monitorear fuentes RSS, portales de noticias regionales (La Verdad, Murcia Diario, etc.) y redes sociales locales. Extraes titulares, cuerpo de noticia, fecha y fuente. Filtras por relevancia para Alcantarilla y su comarca. Ejecutas cada 30 minutos. Formato de salida: JSON estructurado con campos title, body, source, date, relevance_score.",
         lastRun: "Hace 12 min", logs: scraperLogs, chat: scraperChat,
+        skills: [
+          { id: "web-browsing", name: "Web Browsing", category: "tool_use", description: "Accede a URLs externas, parsea HTML y extrae contenido estructurado de portales de noticias y feeds RSS.", proficiency: 92 },
+          { id: "semantic-filtering", name: "Semantic Filtering", category: "retrieval", description: "Evalúa semánticamente cada artículo para determinar su relevancia geográfica usando embeddings.", proficiency: 78 },
+        ],
       },
       {
         id: "redactor-articulos", name: "redactor-articulos", role: "Article Writer",
@@ -268,6 +301,9 @@ export const swarms: Swarm[] = [
         structuredOutput: null,
         prompt: "Eres un periodista digital IA. Recibes noticias en crudo del scraper y las transformas en artículos periodísticos completos en español. Aplicas estilo periodístico neutro, verificas coherencia, añades contexto local cuando es relevante. Generas titular SEO, entradilla, cuerpo del artículo y tags. Longitud objetivo: 300-600 palabras. Tono: profesional, cercano, local.",
         lastRun: "Hace 8 min", logs: writerLogs, chat: writerChat,
+        skills: [
+          { id: "chain-of-thought", name: "Chain-of-Thought", category: "reasoning", description: "Descompone la noticia en hechos, contexto y ángulo editorial antes de generar el artículo final.", proficiency: 85 },
+        ],
       },
       {
         id: "publicador-bbdd", name: "publicador-bbdd", role: "Publisher",
@@ -275,6 +311,9 @@ export const swarms: Swarm[] = [
         structuredOutput: publisherSchema,
         prompt: "Eres el agente publicador. Recibes artículos terminados del redactor y los procesas para publicación. Generas slug SEO, asignas categoría, insertas en la base de datos del CMS. Verificas que no haya duplicados. Programas publicación según horario óptimo de engagement. Notificas al canal de Telegram del periódico con un resumen.",
         lastRun: "Hace 5 min", logs: publisherLogs, chat: publisherChat,
+        skills: [
+          { id: "api-tool-calls", name: "API Tool Calls", category: "tool_use", description: "Invoca APIs externas: CMS REST API, Telegram Bot API y servicio de slugify para publicar y notificar.", proficiency: 88 },
+        ],
       },
       {
         id: "dev-mantenimiento", name: "dev-mantenimiento", role: "Programmer",
@@ -282,6 +321,10 @@ export const swarms: Swarm[] = [
         structuredOutput: null,
         prompt: "Eres el daemon programador de mantenimiento del Diario IA. Monitorizas el estado del sitio web, verificas que las páginas cargan correctamente, revisas los logs de error del servidor. Cuando detectas un problema, generas un informe técnico y propones un fix. También te encargas de actualizar dependencias y optimizar queries de la BBDD. Te activas cada 6 horas o ante alertas críticas.",
         lastRun: "Hace 2h", logs: devLogs, chat: devChat,
+        skills: [
+          { id: "code-execution", name: "Code Execution", category: "tool_use", description: "Ejecuta scripts de diagnóstico en un sandbox seguro para verificar el estado del servidor y la base de datos.", proficiency: 80 },
+          { id: "self-reflection", name: "Self-Reflection", category: "reasoning", description: "Evalúa sus propios informes de error antes de proponer fixes para reducir falsos positivos.", proficiency: 65 },
+        ],
       },
     ],
   },
@@ -298,6 +341,9 @@ export const swarms: Swarm[] = [
         structuredOutput: null,
         prompt: "Eres un agente de soporte al cliente de primer nivel. Respondes consultas frecuentes, clasificas tickets por urgencia y tema, y escalas a humanos cuando es necesario. Tono amable y profesional. Respuesta máxima: 3 párrafos.",
         lastRun: "Hace 1 min", logs: supportLogs, chat: defaultChat,
+        skills: [
+          { id: "episodic-memory", name: "Episodic Memory", category: "memory", description: "Recuerda el historial de interacciones previas de cada usuario para ofrecer respuestas contextualizadas.", proficiency: 74 },
+        ],
       },
       {
         id: "analista-tickets", name: "analista-tickets", role: "Ticket Analyst",
@@ -305,6 +351,10 @@ export const swarms: Swarm[] = [
         structuredOutput: analystSchema,
         prompt: "Analizas todos los tickets de soporte entrantes. Generas reportes diarios de tendencias, detectas problemas recurrentes y propones mejoras al producto basándote en el feedback de los usuarios.",
         lastRun: "Hace 15 min", logs: analystLogs, chat: defaultChat,
+        skills: [
+          { id: "rag-retrieval", name: "RAG Retrieval", category: "retrieval", description: "Busca tickets similares en la base de conocimiento vectorial para detectar patrones y tendencias recurrentes.", proficiency: 88 },
+          { id: "react-reasoning", name: "ReAct Reasoning", category: "reasoning", description: "Alterna entre razonamiento y acción para iterar sobre los datos de tickets hasta generar un reporte sólido.", proficiency: 70 },
+        ],
       },
       {
         id: "scheduler-turnos", name: "scheduler-turnos", role: "Scheduler",
@@ -312,6 +362,7 @@ export const swarms: Swarm[] = [
         structuredOutput: schedulerSchema,
         prompt: "Gestionas la programación de turnos del equipo de soporte humano. Optimizas cobertura según volumen histórico de tickets. Te activas cada día a las 6:00 AM.",
         lastRun: "Hace 18h", logs: schedulerLogs, chat: defaultChat,
+        skills: [],
       },
     ],
   },
@@ -328,6 +379,9 @@ export const swarms: Swarm[] = [
         structuredOutput: null,
         prompt: "Creas contenido para redes sociales (Twitter, Instagram, LinkedIn). Adaptas el tono según la plataforma. Generas copies, sugieres hashtags y propones horarios de publicación óptimos.",
         lastRun: "Hace 30 min", logs: socialLogs, chat: defaultChat,
+        skills: [
+          { id: "multimodal-vision", name: "Multimodal Vision", category: "multimodal", description: "Analiza imágenes de referencia para generar captions y adaptar el copy visual al estilo de cada red social.", proficiency: 72 },
+        ],
       },
       {
         id: "metrics-watcher", name: "metrics-watcher", role: "Metrics Analyst",
@@ -335,6 +389,9 @@ export const swarms: Swarm[] = [
         structuredOutput: metricsSchema,
         prompt: "Monitorizas métricas de engagement en todas las redes sociales. Generas reportes semanales de rendimiento y propones ajustes de estrategia basados en datos.",
         lastRun: "Hace 3h", logs: metricsLogs, chat: defaultChat,
+        skills: [
+          { id: "rag-retrieval-2", name: "RAG Retrieval", category: "retrieval", description: "Consulta histórico de métricas en una base vectorial para detectar correlaciones y estacionalidad.", proficiency: 82 },
+        ],
       },
       {
         id: "community-mod", name: "community-mod", role: "Moderator",
@@ -342,6 +399,7 @@ export const swarms: Swarm[] = [
         structuredOutput: null,
         prompt: "Moderas comentarios y mensajes en redes sociales. Detectas spam, contenido ofensivo y trolls. Respondes a menciones relevantes de la marca.",
         lastRun: "Error: API rate limit", logs: modLogs, chat: defaultChat,
+        skills: [],
       },
     ],
   },
