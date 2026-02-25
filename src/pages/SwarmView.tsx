@@ -44,7 +44,7 @@ const SwarmView = () => {
   return (
     <main className="mx-auto max-w-5xl px-6 py-10 md:px-12">
       <button
-        onClick={() => navigate("/app")}
+        onClick={() => navigate("/swarms")}
         className="mb-6 font-mono-cyber text-xs text-muted-foreground hover:text-primary transition-colors"
       >
         ← Volver a swarms
@@ -78,7 +78,7 @@ const SwarmView = () => {
           {swarm.daemons.map((daemon) => (
             <button
               key={daemon.id}
-              onClick={() => navigate(`/app/swarm/${swarmId}/daemon/${daemon.id}`)}
+              onClick={() => navigate(`/swarms/${swarmId}/daemon/${daemon.id}`)}
               className="group relative flex flex-col items-center border border-border bg-card p-4 transition-all hover:neon-glow hover:z-10"
             >
               <img

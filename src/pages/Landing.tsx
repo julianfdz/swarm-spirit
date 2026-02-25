@@ -17,7 +17,7 @@ const Landing = () => {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button
-            onClick={() => navigate("/app")}
+            onClick={() => navigate("/login")}
             className="rounded-md bg-primary px-5 py-2 font-mono-cyber text-sm text-primary-foreground transition-all hover:neon-glow"
           >
             Login →
@@ -43,7 +43,7 @@ const Landing = () => {
         </p>
 
         <button
-          onClick={() => navigate("/app")}
+          onClick={() => navigate("/login")}
           className="group mt-10 flex items-center gap-2 rounded-lg bg-primary px-8 py-3.5 font-mono-cyber text-base text-primary-foreground transition-all hover:neon-glow"
         >
           Entrar al panel

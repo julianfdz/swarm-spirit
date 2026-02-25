@@ -19,7 +19,7 @@ const AppDashboard = () => {
         {swarms.map((swarm) => (
           <button
             key={swarm.id}
-            onClick={() => navigate(`/app/swarm/${swarm.id}`)}
+            onClick={() => navigate(`/swarms/${swarm.id}`)}
             className="group rounded-lg neon-border bg-card p-5 text-left transition-all hover:neon-glow"
           >
             <div className="flex items-center justify-between">
