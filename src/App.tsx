@@ -13,6 +13,8 @@ import SwarmView from "./pages/SwarmView";
 import DaemonView from "./pages/DaemonView";
 import Netherhosts from "./pages/Netherhosts";
 import Settings from "./pages/Settings";
+import AdminView from "./pages/AdminView";
+import ProfileView from "./pages/ProfileView";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/AppLayout";
 
@@ -35,6 +37,8 @@ const App = () => (
                 <Route path="/swarms/:swarmId" element={<SwarmView />} />
                 <Route path="/swarms/:swarmId/daemon/:daemonId" element={<DaemonView />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/admin" element={<AdminView />} />
+                <Route path="/profile" element={<ProfileView />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

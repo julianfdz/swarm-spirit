@@ -288,6 +288,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       owns_host: { Args: { _host_id: string }; Returns: boolean }
       owns_swarm: { Args: { _swarm_id: string }; Returns: boolean }
     }
