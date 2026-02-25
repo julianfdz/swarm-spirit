@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  landing:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: nethernet
+    ports:
+      - "3014:3000"
+    restart: unless-stopped
+
+    networks:
+      - intrabuhonet
+
+networks:
+  intrabuhonet:
+    external: true
