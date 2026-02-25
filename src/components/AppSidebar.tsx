@@ -1,5 +1,6 @@
 import { LayoutDashboard, Network, LogOut, PanelLeft, Settings, MessageSquare } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "./ThemeToggle";
 
 import {
@@ -15,13 +16,14 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
-  { title: "Swarms", url: "/app", icon: Network },
+  { title: "Swarms", url: "/swarms", icon: Network },
 ];
 
 export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
@@ -82,7 +84,7 @@ export function AppSidebar() {
         </button>
 
         <button
-          onClick={() => navigate("/")}
+          onClick={async () => { await signOut(); navigate("/"); }}
           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-all hover:text-foreground hover:bg-muted ${
             collapsed ? "justify-center px-0" : ""
           }`}

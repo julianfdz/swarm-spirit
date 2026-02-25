@@ -124,7 +124,7 @@ const DaemonView = () => {
       {/* Right: Info - only this scrolls */}
       <div className="flex flex-1 flex-col p-6 md:p-10 overflow-hidden">
         <button
-          onClick={() => navigate(`/app/swarm/${swarmId}`)}
+          onClick={() => navigate(`/swarms/${swarmId}`)}
           className="mb-6 self-start font-mono-cyber text-xs text-muted-foreground hover:text-primary transition-colors"
         >
           ← Volver al swarm
