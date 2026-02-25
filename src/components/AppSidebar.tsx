@@ -71,9 +71,6 @@ export function AppSidebar() {
 
       {/* Footer */}
       <SidebarFooter className="p-2 space-y-1">
-        <div className={`flex items-center ${collapsed ? "justify-center" : "px-2"}`}>
-          <ThemeToggle />
-        </div>
 
         <button
           onClick={toggleSidebar}
