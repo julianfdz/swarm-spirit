@@ -1,14 +1,38 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Server, ShieldCheck, ShieldX, Wifi, WifiOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Server, ShieldCheck, ShieldX, Wifi, WifiOff, Plus, Copy, Clock } from "lucide-react";
+import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type Netherhost = Tables<"netherhosts">;
 
+function generateClaimCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 const Netherhosts = () => {
+  const { user } = useAuth();
   const [hosts, setHosts] = useState<Netherhost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [claimCode, setClaimCode] = useState<string | null>(null);
+  const [claimExpires, setClaimExpires] = useState<Date | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchHosts = async () => {
@@ -22,10 +46,90 @@ const Netherhosts = () => {
     fetchHosts();
   }, []);
 
+  const handleGenerateClaim = async () => {
+    if (!user) return;
+    setGenerating(true);
+    const code = generateClaimCode();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min TTL
+
+    const { error } = await supabase.from("host_claims").insert({
+      created_by: user.id,
+      code,
+      expires_at: expires.toISOString(),
+    });
+
+    if (error) {
+      toast.error("Error generando claim code");
+    } else {
+      setClaimCode(code);
+      setClaimExpires(expires);
+      toast.success("Claim code generado");
+    }
+    setGenerating(false);
+  };
+
+  const copyCode = () => {
+    if (claimCode) {
+      navigator.clipboard.writeText(claimCode);
+      toast.success("Código copiado");
+    }
+  };
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-10 md:px-12">
-      <h2 className="font-mono-cyber text-2xl tracking-wide text-foreground">Netherhosts</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Nodos de host conectados a la red</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-mono-cyber text-2xl tracking-wide text-foreground">Netherhosts</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Nodos de host conectados a la red</p>
+        </div>
+
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setClaimCode(null); setClaimExpires(null); } }}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2 font-mono-cyber text-xs">
+              <Plus className="h-4 w-4" /> Añadir Host
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-mono-cyber">Claim a Host</DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm">
+                Genera un código de un solo uso y pégalo en tu host para vincularlo a tu cuenta.
+              </DialogDescription>
+            </DialogHeader>
+
+            {!claimCode ? (
+              <div className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  El código expira en <strong>10 minutos</strong> y solo puede usarse una vez.
+                </p>
+                <Button onClick={handleGenerateClaim} disabled={generating} className="w-full gap-2 font-mono-cyber">
+                  {generating ? "Generando..." : "Generar Claim Code"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={claimCode}
+                    className="font-mono-cyber text-lg tracking-[0.3em] text-center text-primary"
+                  />
+                  <Button variant="outline" size="icon" onClick={copyCode}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Expira: {claimExpires?.toLocaleTimeString()}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ejecuta en tu host: <code className="rounded bg-muted px-1.5 py-0.5 font-mono-cyber text-foreground">netherhost link --claim {claimCode}</code>
+                </p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {loading ? (
         <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -48,7 +152,7 @@ const Netherhosts = () => {
           </div>
           <h3 className="font-mono-cyber text-lg text-foreground">No se encontraron hosts</h3>
           <p className="max-w-md text-sm text-muted-foreground">
-            No hay ningún nodo de host conectado a la red en este momento. Cuando se registren netherhosts aparecerán listados aquí.
+            No hay ningún nodo de host conectado. Usa "Añadir Host" para generar un claim code y vincular un nodo.
           </p>
         </div>
       ) : (
