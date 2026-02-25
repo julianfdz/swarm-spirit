@@ -1,4 +1,4 @@
-import { LayoutDashboard, Network, LogOut, PanelLeft, Settings, MessageSquare } from "lucide-react";
+import { Network, LogOut, PanelLeft, Settings, Server } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import ThemeToggle from "./ThemeToggle";
@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
+  { title: "Hosts", url: "/hosts", icon: Server },
   { title: "Swarms", url: "/swarms", icon: Network },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
