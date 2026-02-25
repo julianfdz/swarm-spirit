@@ -14,6 +14,142 @@ export type Database = {
   }
   public: {
     Tables: {
+      daemons: {
+        Row: {
+          capabilities: Json | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          capabilities?: Json | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          capabilities?: Json | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daemons_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_daemons: {
+        Row: {
+          daemon_id: string
+          daemon_ref: string | null
+          disabled: boolean
+          host_id: string
+          id: string
+          last_seen: string | null
+          status: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          daemon_id: string
+          daemon_ref?: string | null
+          disabled?: boolean
+          host_id: string
+          id?: string
+          last_seen?: string | null
+          status?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          daemon_id?: string
+          daemon_ref?: string | null
+          disabled?: boolean
+          host_id?: string
+          id?: string
+          last_seen?: string | null
+          status?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_daemons_daemon_id_fkey"
+            columns: ["daemon_id"]
+            isOneToOne: false
+            referencedRelation: "daemons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_daemons_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "netherhosts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logs: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          source: string
+          source_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json | null
+          source: string
+          source_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          source?: string
+          source_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       netherhosts: {
         Row: {
           created_at: string
@@ -82,6 +218,39 @@ export type Database = {
         }
         Relationships: []
       }
+      swarm_daemons: {
+        Row: {
+          created_at: string
+          daemon_id: string
+          swarm_id: string
+        }
+        Insert: {
+          created_at?: string
+          daemon_id: string
+          swarm_id: string
+        }
+        Update: {
+          created_at?: string
+          daemon_id?: string
+          swarm_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "swarm_daemons_daemon_id_fkey"
+            columns: ["daemon_id"]
+            isOneToOne: false
+            referencedRelation: "daemons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "swarm_daemons_swarm_id_fkey"
+            columns: ["swarm_id"]
+            isOneToOne: false
+            referencedRelation: "swarms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       swarms: {
         Row: {
           created_at: string
@@ -119,7 +288,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      owns_host: { Args: { _host_id: string }; Returns: boolean }
+      owns_swarm: { Args: { _swarm_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
