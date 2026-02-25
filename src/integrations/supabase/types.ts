@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      netherhosts: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain_cert: string | null
+          id: string
+          last_heartbeat: string | null
+          name: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain_cert?: string | null
+          id?: string
+          last_heartbeat?: string | null
+          name: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain_cert?: string | null
+          id?: string
+          last_heartbeat?: string | null
+          name?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -38,6 +71,30 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      swarms: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
         }
         Relationships: []
       }
