@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,7 @@ function generateClaimCode() {
 
 const Netherhosts = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [hosts, setHosts] = useState<Netherhost[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimCode, setClaimCode] = useState<string | null>(null);
@@ -183,7 +185,8 @@ const Netherhosts = () => {
           ) : filteredHosts.map((host) => (
             <div
               key={host.id}
-              className="rounded-lg neon-border bg-card p-5 transition-all hover:neon-glow"
+              onClick={() => navigate(`/hosts/${host.id}`)}
+              className="cursor-pointer rounded-lg neon-border bg-card p-5 transition-all hover:neon-glow"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
