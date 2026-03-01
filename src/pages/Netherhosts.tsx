@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Server, ShieldCheck, ShieldX, Wifi, WifiOff, Plus, Copy, Clock } from "lucide-react";
+import { Server, ShieldCheck, ShieldX, Wifi, WifiOff, Plus, Copy, Clock, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import {
@@ -33,6 +33,11 @@ const Netherhosts = () => {
   const [claimExpires, setClaimExpires] = useState<Date | null>(null);
   const [generating, setGenerating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredHosts = hosts.filter((h) =>
+    h.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   useEffect(() => {
     const fetchHosts = async () => {
@@ -131,6 +136,20 @@ const Netherhosts = () => {
         </Dialog>
       </div>
 
+      {!loading && hosts.length > 0 && (
+        <div className="mt-6">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar host por nombre..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 font-mono-cyber text-xs"
+            />
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -157,7 +176,11 @@ const Netherhosts = () => {
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {hosts.map((host) => (
+          {filteredHosts.length === 0 ? (
+            <p className="col-span-full text-center text-sm text-muted-foreground py-8">
+              No se encontraron hosts con "{search}"
+            </p>
+          ) : filteredHosts.map((host) => (
             <div
               key={host.id}
               className="rounded-lg neon-border bg-card p-5 transition-all hover:neon-glow"
@@ -197,6 +220,7 @@ const Netherhosts = () => {
               </div>
             </div>
           ))}
+          
         </div>
       )}
     </main>
