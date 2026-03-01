@@ -1,0 +1,1 @@
+ALTER TABLE public.netherhosts ADD COLUMN token TEXT;

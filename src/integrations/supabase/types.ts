@@ -232,6 +232,7 @@ export type Database = {
           id: string
           last_heartbeat: string | null
           name: string
+          token: string | null
           user_id: string
           verified: boolean
         }
@@ -242,6 +243,7 @@ export type Database = {
           id?: string
           last_heartbeat?: string | null
           name: string
+          token?: string | null
           user_id: string
           verified?: boolean
         }
@@ -252,6 +254,7 @@ export type Database = {
           id?: string
           last_heartbeat?: string | null
           name?: string
+          token?: string | null
           user_id?: string
           verified?: boolean
         }
