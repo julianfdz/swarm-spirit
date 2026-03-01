@@ -12,6 +12,7 @@ import AppDashboard from "./pages/AppDashboard";
 import SwarmView from "./pages/SwarmView";
 import DaemonView from "./pages/DaemonView";
 import Netherhosts from "./pages/Netherhosts";
+import HostDetail from "./pages/HostDetail";
 import Settings from "./pages/Settings";
 import AdminView from "./pages/AdminView";
 import ProfileView from "./pages/ProfileView";
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/hosts" element={<Netherhosts />} />
+                <Route path="/hosts/:hostId" element={<HostDetail />} />
                 <Route path="/swarms" element={<AppDashboard />} />
                 <Route path="/swarms/:swarmId" element={<SwarmView />} />
                 <Route path="/swarms/:swarmId/daemon/:daemonId" element={<DaemonView />} />
