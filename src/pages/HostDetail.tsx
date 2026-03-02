@@ -19,6 +19,7 @@ import {
   Bot,
   Info,
   FileJson,
+  Radar,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -32,8 +33,9 @@ interface WellKnownData {
 interface RemoteDaemon {
   id?: string;
   name?: string;
-  description?: string;
-  status?: string;
+  sigil_url?: string;
+  invoke_url?: string;
+  status_url?: string;
   [key: string]: unknown;
 }
 
@@ -44,13 +46,11 @@ const HostDetail = () => {
   const [daemons, setDaemons] = useState<HostDaemon[]>([]);
   const [wellKnown, setWellKnown] = useState<WellKnownData | null>(null);
   const [wellKnownError, setWellKnownError] = useState<string | null>(null);
-  const [wellKnownLoading, setWellKnownLoading] = useState(false);
   const [agentCard, setAgentCard] = useState<WellKnownData | null>(null);
   const [agentCardError, setAgentCardError] = useState<string | null>(null);
-  const [agentCardLoading, setAgentCardLoading] = useState(false);
   const [remoteDaemons, setRemoteDaemons] = useState<RemoteDaemon[]>([]);
-  const [remoteDaemonsLoading, setRemoteDaemonsLoading] = useState(false);
-  const [remoteDaemonsError, setRemoteDaemonsError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,60 +85,39 @@ const HostDetail = () => {
     return `${base}${path}`;
   };
 
-  const fetchWellKnown = async (baseUrl: string) => {
-    setWellKnownLoading(true);
+  const scanHost = async () => {
+    if (!host?.host_url) return;
+    setScanning(true);
     setWellKnownError(null);
+    setAgentCardError(null);
+
+    // Fetch netherportal.json
     try {
-      const url = buildUrl(baseUrl, "/.well-known/netherportal.json");
+      const url = buildUrl(host.host_url, "/.well-known/netherportal.json");
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setWellKnown(await res.json());
+      const json = await res.json();
+      setWellKnown(json);
+      // Parse daemon_index
+      const index = Array.isArray(json?.daemon_index) ? json.daemon_index : [];
+      setRemoteDaemons(index as RemoteDaemon[]);
     } catch (err: unknown) {
       setWellKnownError(err instanceof Error ? err.message : "No se pudo conectar");
-    } finally {
-      setWellKnownLoading(false);
+      setRemoteDaemons([]);
     }
-  };
 
-  const fetchAgentCard = async (baseUrl: string) => {
-    setAgentCardLoading(true);
-    setAgentCardError(null);
+    // Fetch agent.json
     try {
-      const url = buildUrl(baseUrl, "/.well-known/agent.json");
+      const url = buildUrl(host.host_url, "/.well-known/agent.json");
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setAgentCard(await res.json());
     } catch (err: unknown) {
       setAgentCardError(err instanceof Error ? err.message : "No se pudo conectar");
-    } finally {
-      setAgentCardLoading(false);
     }
-  };
 
-  const fetchRemoteDaemons = async (baseUrl: string) => {
-    setRemoteDaemonsLoading(true);
-    setRemoteDaemonsError(null);
-    try {
-      const url = buildUrl(baseUrl, "/.well-known/netherportal.json");
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      // Parse daemons from the well-known — expect an array at "daemons" key or root array
-      const raw = Array.isArray(json) ? json : Array.isArray(json?.daemons) ? json.daemons : [];
-      setRemoteDaemons(raw as RemoteDaemon[]);
-    } catch (err: unknown) {
-      setRemoteDaemonsError(err instanceof Error ? err.message : "No se pudo conectar");
-      setRemoteDaemons([]);
-    } finally {
-      setRemoteDaemonsLoading(false);
-    }
-  };
-
-  const fetchAllA2A = () => {
-    if (host?.host_url) {
-      fetchWellKnown(host.host_url);
-      fetchAgentCard(host.host_url);
-    }
+    setScanning(false);
+    setScanned(true);
   };
 
   if (loading) {
@@ -205,6 +184,18 @@ const HostDetail = () => {
               {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               {isOnline ? "Online" : "Offline"}
             </Badge>
+            {host.host_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scanHost}
+                disabled={scanning}
+                className="gap-1.5 font-mono-cyber text-xs border-primary/30 hover:border-primary/60 hover:shadow-[0_0_12px_hsl(var(--primary)/0.2)]"
+              >
+                <Radar className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} />
+                {scanning ? "Scanning…" : "Scan Host"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -217,6 +208,11 @@ const HostDetail = () => {
           </TabsTrigger>
           <TabsTrigger value="daemons" className="gap-1.5 font-mono-cyber text-xs">
             <Bot className="h-3.5 w-3.5" /> Daemons
+            {remoteDaemons.length > 0 && (
+              <span className="ml-1 rounded-full bg-primary/20 text-primary px-1.5 py-0.5 text-[9px] font-mono-cyber">
+                {remoteDaemons.length}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="a2a" className="gap-1.5 font-mono-cyber text-xs">
             <FileJson className="h-3.5 w-3.5" /> Raw A2A
@@ -244,49 +240,33 @@ const HostDetail = () => {
         {/* Daemons Tab */}
         <TabsContent value="daemons">
           <div className="space-y-6">
-            {/* Remote daemons from well-known */}
+            {/* Remote daemons from daemon_index */}
             <div className="rounded-lg neon-border bg-card p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-primary" />
-                  <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
-                    Remote Daemons
-                  </h2>
-                </div>
-                {host.host_url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchRemoteDaemons(host.host_url!)}
-                    disabled={remoteDaemonsLoading}
-                    className="gap-1.5 font-mono-cyber text-xs"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${remoteDaemonsLoading ? "animate-spin" : ""}`} />
-                    Scan host
-                  </Button>
-                )}
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
+                  Remote Daemon Index
+                </h2>
               </div>
 
-              {!host.host_url ? (
-                <p className="text-sm text-muted-foreground py-2">Sin URL configurada.</p>
-              ) : remoteDaemonsLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
-                </div>
-              ) : remoteDaemonsError ? (
-                <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{remoteDaemonsError}</span>
-                </div>
+              {!scanned ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  Pulsa <span className="text-primary font-mono-cyber">"Scan Host"</span> para descubrir los daemons remotos.
+                </p>
               ) : remoteDaemons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {remoteDaemons.map((rd, i) => (
                     <DaemonMiniCard key={rd.id ?? i} daemon={rd} />
                   ))}
                 </div>
+              ) : wellKnownError ? (
+                <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{wellKnownError}</span>
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground py-2">
-                  Pulsa "Scan host" para descubrir daemons remotos.
+                  No se encontraron daemons en el daemon_index del host.
                 </p>
               )}
             </div>
@@ -328,21 +308,14 @@ const HostDetail = () => {
                   Este host no tiene una URL configurada. No se pueden consultar los endpoints A2A.
                 </p>
               </div>
+            ) : !scanned ? (
+              <div className="rounded-lg neon-border bg-card p-6">
+                <p className="text-xs text-muted-foreground">
+                  Pulsa <span className="text-primary font-mono-cyber">"Scan Host"</span> para consultar los endpoints.
+                </p>
+              </div>
             ) : (
               <>
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchAllA2A}
-                    disabled={wellKnownLoading || agentCardLoading}
-                    className="gap-1.5 font-mono-cyber text-xs"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${wellKnownLoading || agentCardLoading ? "animate-spin" : ""}`} />
-                    Consultar endpoints
-                  </Button>
-                </div>
-
                 {/* netherportal.json */}
                 <EndpointCard
                   title="GET /.well-known/netherportal.json"
@@ -350,7 +323,6 @@ const HostDetail = () => {
                   icon={<Globe className="h-4 w-4 text-primary" />}
                   data={wellKnown}
                   error={wellKnownError}
-                  loading={wellKnownLoading}
                 />
 
                 {/* agent.json */}
@@ -360,7 +332,6 @@ const HostDetail = () => {
                   icon={<FileJson className="h-4 w-4 text-primary" />}
                   data={agentCard}
                   error={agentCardError}
-                  loading={agentCardLoading}
                 />
               </>
             )}
@@ -376,32 +347,22 @@ const HostDetail = () => {
 function DaemonMiniCard({ daemon }: { daemon: RemoteDaemon }) {
   const name = daemon.name ?? daemon.id ?? "unknown";
   const id = daemon.id ?? "—";
-  const description = typeof daemon.description === "string" ? daemon.description : null;
-  const status = typeof daemon.status === "string" ? daemon.status : null;
-
-  const statusColor =
-    status === "running" ? "bg-neon-success shadow-[0_0_6px_hsl(var(--neon-success))]" :
-    status === "stopped" || status === "error" ? "bg-destructive shadow-[0_0_6px_hsl(var(--destructive))]" :
-    "bg-muted-foreground";
 
   return (
     <div className="group relative rounded-lg border border-border bg-background/50 p-4 transition-all hover:border-primary/40 hover:shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
       <div className="flex items-start gap-3">
-        <div className="mt-1 rounded-md border border-primary/20 bg-primary/5 p-2">
+        <div className="mt-0.5 rounded-md border border-primary/20 bg-primary/5 p-2">
           <Bot className="h-4 w-4 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="font-mono-cyber text-xs tracking-wide text-foreground truncate">{name}</h4>
-            {status && (
-              <div className={`h-2 w-2 rounded-full shrink-0 ${statusColor}`} />
-            )}
-          </div>
+          <h4 className="font-mono-cyber text-xs tracking-wide text-foreground truncate">{name}</h4>
           <p className="font-mono-cyber text-[10px] text-muted-foreground mt-0.5 truncate" title={id}>
             {id}
           </p>
-          {description && (
-            <p className="text-[10px] text-muted-foreground/70 mt-1 line-clamp-2">{description}</p>
+          {daemon.sigil_url && (
+            <p className="text-[9px] text-primary/50 mt-1 truncate font-mono-cyber" title={daemon.sigil_url}>
+              sigil → {daemon.sigil_url}
+            </p>
           )}
         </div>
       </div>
@@ -415,14 +376,12 @@ function EndpointCard({
   icon,
   data,
   error,
-  loading,
 }: {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
   data: WellKnownData | null;
   error: string | null;
-  loading: boolean;
 }) {
   return (
     <div className="rounded-lg neon-border bg-card p-6 space-y-3">
@@ -434,13 +393,7 @@ function EndpointCard({
         </div>
       </div>
 
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>Error: {error}</span>
@@ -450,9 +403,7 @@ function EndpointCard({
           {JSON.stringify(data, null, 2)}
         </pre>
       ) : (
-        <p className="text-xs text-muted-foreground py-2">
-          Pulsa "Consultar endpoints" para obtener los datos.
-        </p>
+        <p className="text-xs text-muted-foreground py-2">Sin datos.</p>
       )}
     </div>
   );
