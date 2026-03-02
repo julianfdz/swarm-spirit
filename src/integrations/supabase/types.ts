@@ -229,6 +229,7 @@ export type Database = {
           created_at: string
           description: string | null
           domain_cert: string | null
+          host_url: string | null
           id: string
           last_heartbeat: string | null
           name: string
@@ -240,6 +241,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           domain_cert?: string | null
+          host_url?: string | null
           id?: string
           last_heartbeat?: string | null
           name: string
@@ -251,6 +253,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           domain_cert?: string | null
+          host_url?: string | null
           id?: string
           last_heartbeat?: string | null
           name?: string
