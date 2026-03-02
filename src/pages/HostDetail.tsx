@@ -29,6 +29,14 @@ interface WellKnownData {
   [key: string]: unknown;
 }
 
+interface RemoteDaemon {
+  id?: string;
+  name?: string;
+  description?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
 const HostDetail = () => {
   const { hostId } = useParams<{ hostId: string }>();
   const navigate = useNavigate();
@@ -40,6 +48,9 @@ const HostDetail = () => {
   const [agentCard, setAgentCard] = useState<WellKnownData | null>(null);
   const [agentCardError, setAgentCardError] = useState<string | null>(null);
   const [agentCardLoading, setAgentCardLoading] = useState(false);
+  const [remoteDaemons, setRemoteDaemons] = useState<RemoteDaemon[]>([]);
+  const [remoteDaemonsLoading, setRemoteDaemonsLoading] = useState(false);
+  const [remoteDaemonsError, setRemoteDaemonsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -101,6 +112,25 @@ const HostDetail = () => {
       setAgentCardError(err instanceof Error ? err.message : "No se pudo conectar");
     } finally {
       setAgentCardLoading(false);
+    }
+  };
+
+  const fetchRemoteDaemons = async (baseUrl: string) => {
+    setRemoteDaemonsLoading(true);
+    setRemoteDaemonsError(null);
+    try {
+      const url = buildUrl(baseUrl, "/.well-known/netherportal.json");
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      // Parse daemons from the well-known — expect an array at "daemons" key or root array
+      const raw = Array.isArray(json) ? json : Array.isArray(json?.daemons) ? json.daemons : [];
+      setRemoteDaemons(raw as RemoteDaemon[]);
+    } catch (err: unknown) {
+      setRemoteDaemonsError(err instanceof Error ? err.message : "No se pudo conectar");
+      setRemoteDaemons([]);
+    } finally {
+      setRemoteDaemonsLoading(false);
     }
   };
 
@@ -213,29 +243,77 @@ const HostDetail = () => {
 
         {/* Daemons Tab */}
         <TabsContent value="daemons">
-          <div className="rounded-lg neon-border bg-card p-6 space-y-4">
-            <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
-              Daemons en este Host ({daemons.length})
-            </h2>
-            {daemons.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No hay daemons asignados a este host.</p>
-            ) : (
-              <div className="space-y-2">
-                {daemons.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between rounded-md bg-background/50 px-4 py-3 border border-border">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-2 w-2 rounded-full ${d.status === "running" ? "bg-neon-success" : d.status === "stopped" ? "bg-destructive" : "bg-muted-foreground"}`} />
-                      <div>
-                        <p className="font-mono-cyber text-xs text-foreground">{d.daemon_ref ?? d.daemon_id}</p>
-                        {d.version && <p className="text-[10px] text-muted-foreground">v{d.version}</p>}
+          <div className="space-y-6">
+            {/* Remote daemons from well-known */}
+            <div className="rounded-lg neon-border bg-card p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-primary" />
+                  <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
+                    Remote Daemons
+                  </h2>
+                </div>
+                {host.host_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchRemoteDaemons(host.host_url!)}
+                    disabled={remoteDaemonsLoading}
+                    className="gap-1.5 font-mono-cyber text-xs"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${remoteDaemonsLoading ? "animate-spin" : ""}`} />
+                    Scan host
+                  </Button>
+                )}
+              </div>
+
+              {!host.host_url ? (
+                <p className="text-sm text-muted-foreground py-2">Sin URL configurada.</p>
+              ) : remoteDaemonsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-lg" />)}
+                </div>
+              ) : remoteDaemonsError ? (
+                <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{remoteDaemonsError}</span>
+                </div>
+              ) : remoteDaemons.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {remoteDaemons.map((rd, i) => (
+                    <DaemonMiniCard key={rd.id ?? i} daemon={rd} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground py-2">
+                  Pulsa "Scan host" para descubrir daemons remotos.
+                </p>
+              )}
+            </div>
+
+            {/* DB registered daemons */}
+            {daemons.length > 0 && (
+              <div className="rounded-lg neon-border bg-card p-6 space-y-4">
+                <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
+                  Registrados en DB ({daemons.length})
+                </h2>
+                <div className="space-y-2">
+                  {daemons.map((d) => (
+                    <div key={d.id} className="flex items-center justify-between rounded-md bg-background/50 px-4 py-3 border border-border">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-2 w-2 rounded-full ${d.status === "running" ? "bg-neon-success" : d.status === "stopped" ? "bg-destructive" : "bg-muted-foreground"}`} />
+                        <div>
+                          <p className="font-mono-cyber text-xs text-foreground">{d.daemon_ref ?? d.daemon_id}</p>
+                          {d.version && <p className="text-[10px] text-muted-foreground">v{d.version}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="font-mono-cyber text-[10px]">{d.status}</Badge>
+                        {d.disabled && <Badge variant="destructive" className="font-mono-cyber text-[10px]">disabled</Badge>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="font-mono-cyber text-[10px]">{d.status}</Badge>
-                      {d.disabled && <Badge variant="destructive" className="font-mono-cyber text-[10px]">disabled</Badge>}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -294,6 +372,42 @@ const HostDetail = () => {
 };
 
 /* ── Sub-components ── */
+
+function DaemonMiniCard({ daemon }: { daemon: RemoteDaemon }) {
+  const name = daemon.name ?? daemon.id ?? "unknown";
+  const id = daemon.id ?? "—";
+  const description = typeof daemon.description === "string" ? daemon.description : null;
+  const status = typeof daemon.status === "string" ? daemon.status : null;
+
+  const statusColor =
+    status === "running" ? "bg-neon-success shadow-[0_0_6px_hsl(var(--neon-success))]" :
+    status === "stopped" || status === "error" ? "bg-destructive shadow-[0_0_6px_hsl(var(--destructive))]" :
+    "bg-muted-foreground";
+
+  return (
+    <div className="group relative rounded-lg border border-border bg-background/50 p-4 transition-all hover:border-primary/40 hover:shadow-[0_0_15px_hsl(var(--primary)/0.15)]">
+      <div className="flex items-start gap-3">
+        <div className="mt-1 rounded-md border border-primary/20 bg-primary/5 p-2">
+          <Bot className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4 className="font-mono-cyber text-xs tracking-wide text-foreground truncate">{name}</h4>
+            {status && (
+              <div className={`h-2 w-2 rounded-full shrink-0 ${statusColor}`} />
+            )}
+          </div>
+          <p className="font-mono-cyber text-[10px] text-muted-foreground mt-0.5 truncate" title={id}>
+            {id}
+          </p>
+          {description && (
+            <p className="text-[10px] text-muted-foreground/70 mt-1 line-clamp-2">{description}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function EndpointCard({
   title,
