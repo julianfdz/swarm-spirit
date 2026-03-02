@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { swarms as mockSwarms } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +16,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Network, AlertCircle } from "lucide-react";
+import { Plus, Network, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -117,6 +119,45 @@ const AppDashboard = () => {
           ))}
         </div>
       )}
+
+      {/* Mock Swarms */}
+      <div className="mt-10">
+        <div className="flex items-center gap-2 mb-4">
+          <FlaskConical className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-mono-cyber text-xs tracking-wide text-muted-foreground uppercase">Mockup / Demo</h3>
+        </div>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {mockSwarms.map((swarm) => {
+            const statusColor =
+              swarm.activeCount === swarm.daemonCount ? "bg-neon-success" :
+              swarm.activeCount > 0 ? "bg-neon-warning" : "bg-neon-error";
+            return (
+              <button
+                key={swarm.id}
+                onClick={() => navigate(`/swarms/${swarm.id}`)}
+                className="group relative rounded-lg neon-border bg-card p-5 text-left transition-all hover:neon-glow opacity-70"
+              >
+                <Badge variant="secondary" className="absolute top-2 right-2 font-mono-cyber text-[9px] gap-1">
+                  <FlaskConical className="h-2.5 w-2.5" /> mockup
+                </Badge>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-mono-cyber text-sm tracking-wide text-foreground group-hover:text-primary transition-colors">
+                    {swarm.name}
+                  </h3>
+                  <span className={`h-2.5 w-2.5 rounded-full ${statusColor}`} />
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+                  {swarm.description}
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="font-mono-cyber text-xs text-primary">{swarm.activeCount}/{swarm.daemonCount} activos</span>
+                  <span className="text-xs text-muted-foreground">→</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
