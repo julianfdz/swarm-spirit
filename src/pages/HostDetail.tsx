@@ -71,8 +71,8 @@ const HostDetail = () => {
     try {
       const normalized = baseUrl.replace(/\/+$/, "");
       const url = normalized.startsWith("http")
-        ? `${normalized}/.well-known/netherhost`
-        : `https://${normalized}/.well-known/netherhost`;
+        ? `${normalized}/.well-known/netherportal.json`
+        : `https://${normalized}/.well-known/netherportal.json`;
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -207,7 +207,7 @@ const HostDetail = () => {
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-primary" />
             <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
-              .well-known/netherhost
+              .well-known/netherportal.json
             </h2>
           </div>
           {host.host_url && (
