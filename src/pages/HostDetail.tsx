@@ -47,8 +47,8 @@ const HostDetail = () => {
       setHost(data);
       setLoading(false);
 
-      if (data?.domain_cert) {
-        fetchWellKnown(data.domain_cert);
+      if (data?.host_url) {
+        fetchWellKnown(data.host_url);
       }
     };
 
@@ -65,13 +65,14 @@ const HostDetail = () => {
     fetchDaemons();
   }, [hostId]);
 
-  const fetchWellKnown = async (domain: string) => {
+  const fetchWellKnown = async (baseUrl: string) => {
     setWellKnownLoading(true);
     setWellKnownError(null);
     try {
-      const url = domain.startsWith("http")
-        ? `${domain}/.well-known/netherhost`
-        : `https://${domain}/.well-known/netherhost`;
+      const normalized = baseUrl.replace(/\/+$/, "");
+      const url = normalized.startsWith("http")
+        ? `${normalized}/.well-known/netherhost`
+        : `https://${normalized}/.well-known/netherhost`;
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -161,6 +162,7 @@ const HostDetail = () => {
         <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">Información del Host</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <InfoRow label="ID" value={host.id} mono />
+          <InfoRow label="Host URL" value={host.host_url ?? "—"} mono />
           <InfoRow label="Dominio / Cert" value={host.domain_cert ?? "—"} />
           <InfoRow label="Creado" value={new Date(host.created_at).toLocaleString()} />
           <InfoRow
@@ -208,11 +210,11 @@ const HostDetail = () => {
               .well-known/netherhost
             </h2>
           </div>
-          {host.domain_cert && (
+          {host.host_url && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fetchWellKnown(host.domain_cert!)}
+              onClick={() => fetchWellKnown(host.host_url!)}
               disabled={wellKnownLoading}
               className="gap-1.5 font-mono-cyber text-xs"
             >
@@ -222,9 +224,9 @@ const HostDetail = () => {
           )}
         </div>
 
-        {!host.domain_cert ? (
+        {!host.host_url ? (
           <p className="text-sm text-muted-foreground py-2">
-            Este host no tiene un dominio configurado. No se puede consultar el well-known.
+            Este host no tiene una URL configurada. No se puede consultar el well-known.
           </p>
         ) : wellKnownLoading ? (
           <div className="space-y-2">
