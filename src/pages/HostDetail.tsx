@@ -52,6 +52,8 @@ const HostDetail = () => {
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [healthStatus, setHealthStatus] = useState<"unknown" | "alive" | "dead">("unknown");
+  const [healthVersion, setHealthVersion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hostId) return;
@@ -90,6 +92,29 @@ const HostDetail = () => {
     setScanning(true);
     setWellKnownError(null);
     setAgentCardError(null);
+    setHealthStatus("unknown");
+    setHealthVersion(null);
+
+    // Health check first
+    try {
+      const healthUrl = buildUrl(host.host_url, "/api/v1/health");
+      const hRes = await fetch(healthUrl, { signal: AbortSignal.timeout(8000) });
+      if (!hRes.ok) throw new Error(`HTTP ${hRes.status}`);
+      const hJson = await hRes.json();
+      const alive = hJson?.ok === true && hJson?.data?.status === "alive";
+      setHealthStatus(alive ? "alive" : "dead");
+      setHealthVersion(hJson?.data?.version ?? null);
+      if (!alive) {
+        setScanning(false);
+        setScanned(true);
+        return; // Host down, skip further scanning
+      }
+    } catch {
+      setHealthStatus("dead");
+      setScanning(false);
+      setScanned(true);
+      return;
+    }
 
     // Fetch netherportal.json
     try {
@@ -98,7 +123,6 @@ const HostDetail = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setWellKnown(json);
-      // Parse daemon_index
       const index = Array.isArray(json?.daemon_index) ? json.daemon_index : [];
       setRemoteDaemons(index as RemoteDaemon[]);
     } catch (err: unknown) {
@@ -184,6 +208,23 @@ const HostDetail = () => {
               {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               {isOnline ? "Online" : "Offline"}
             </Badge>
+            {healthStatus !== "unknown" && (
+              <Badge
+                variant="outline"
+                className={`gap-1 font-mono-cyber text-xs ${
+                  healthStatus === "alive"
+                    ? "border-neon-success/40 text-neon-success"
+                    : "border-destructive/40 text-destructive"
+                }`}
+              >
+                <span className={`inline-block h-2 w-2 rounded-full ${
+                  healthStatus === "alive"
+                    ? "bg-neon-success shadow-[0_0_6px_hsl(var(--neon-success))]"
+                    : "bg-destructive shadow-[0_0_6px_hsl(var(--destructive))]"
+                }`} />
+                {healthStatus === "alive" ? `Healthy${healthVersion ? ` v${healthVersion}` : ""}` : "Unreachable"}
+              </Badge>
+            )}
             {host.host_url && (
               <Button
                 variant="outline"
