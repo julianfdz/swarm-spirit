@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { swarms, Daemon } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { swarms as mockSwarms, Daemon } from "@/data/mockData";
+import { Skeleton } from "@/components/ui/skeleton";
 import EventStream from "@/components/EventStream";
 import TaskPool from "@/components/TaskPool";
 
@@ -24,8 +26,39 @@ const SwarmView = () => {
   const { swarmId } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState<SwarmTab>("daemons");
+  const [loading, setLoading] = useState(true);
+  const [dbSwarm, setDbSwarm] = useState<{ id: string; name: string; description: string | null } | null>(null);
 
-  const swarm = swarms.find((s) => s.id === swarmId);
+  // Check mock swarms first
+  const mockSwarm = mockSwarms.find((s) => s.id === swarmId);
+
+  useEffect(() => {
+    if (mockSwarm || !swarmId) {
+      setLoading(false);
+      return;
+    }
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("swarms")
+        .select("*")
+        .eq("id", swarmId)
+        .single();
+      setDbSwarm(data);
+      setLoading(false);
+    };
+    fetch();
+  }, [swarmId, mockSwarm]);
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-5xl px-6 py-10 md:px-12 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-20 w-full rounded-lg" />
+      </main>
+    );
+  }
+
+  const swarm = mockSwarm ?? dbSwarm;
 
   if (!swarm) {
     return (
@@ -34,6 +67,8 @@ const SwarmView = () => {
       </div>
     );
   }
+
+  const isMock = !!mockSwarm;
 
   const tabs: { key: SwarmTab; label: string }[] = [
     { key: "daemons", label: "Daemons" },
@@ -73,9 +108,9 @@ const SwarmView = () => {
       </div>
 
       {/* Daemons Grid */}
-      {tab === "daemons" && (
+      {tab === "daemons" && isMock && mockSwarm && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {swarm.daemons.map((daemon) => (
+          {mockSwarm.daemons.map((daemon) => (
             <button
               key={daemon.id}
               onClick={() => navigate(`/swarms/${swarmId}/daemon/${daemon.id}`)}
@@ -94,6 +129,12 @@ const SwarmView = () => {
               <p className="mt-1 text-[10px] text-muted-foreground">{daemon.lastRun}</p>
             </button>
           ))}
+        </div>
+      )}
+
+      {tab === "daemons" && !isMock && (
+        <div className="text-center py-12">
+          <p className="text-sm text-muted-foreground">No hay daemons asignados a este swarm todavía.</p>
         </div>
       )}
 
