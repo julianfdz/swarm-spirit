@@ -1,4 +1,4 @@
-import { Network, LogOut, PanelLeft, Settings, Server, Shield, User, BookOpen } from "lucide-react";
+import { Network, LogOut, PanelLeft, Settings, Server, Shield, User, BookOpen, Bot } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -18,6 +18,7 @@ import {
 const mainNavItems = [
   { title: "Hosts", url: "/hosts", icon: Server },
   { title: "Swarms", url: "/swarms", icon: Network },
+  { title: "Daemons", url: "/daemons", icon: Bot },
   { title: "Grimorios", url: "/grimoires", icon: BookOpen },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

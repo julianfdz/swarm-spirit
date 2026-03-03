@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,8 @@ import {
   Info,
   FileJson,
   Radar,
+  ScanSearch,
+  Loader2,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -42,6 +46,7 @@ interface RemoteDaemon {
 const HostDetail = () => {
   const { hostId } = useParams<{ hostId: string }>();
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [host, setHost] = useState<Netherhost | null>(null);
   const [daemons, setDaemons] = useState<HostDaemon[]>([]);
   const [wellKnown, setWellKnown] = useState<WellKnownData | null>(null);
@@ -54,6 +59,9 @@ const HostDetail = () => {
   const [loading, setLoading] = useState(true);
   const [healthStatus, setHealthStatus] = useState<"unknown" | "alive" | "dead">("unknown");
   const [healthVersion, setHealthVersion] = useState<string | null>(null);
+  const [rescanning, setRescanning] = useState(false);
+
+  const API_URL = import.meta.env.VITE_NETHERNET_API_URL;
 
   useEffect(() => {
     if (!hostId) return;
@@ -80,6 +88,40 @@ const HostDetail = () => {
     fetchHost();
     fetchDaemons();
   }, [hostId]);
+
+  const refreshDaemons = useCallback(async () => {
+    if (!hostId) return;
+    const { data } = await supabase
+      .from("host_daemons")
+      .select("*")
+      .eq("host_id", hostId)
+      .order("updated_at", { ascending: false });
+    setDaemons(data ?? []);
+  }, [hostId]);
+
+  const rescanHost = async () => {
+    if (!hostId || !session?.access_token || !API_URL) return;
+    setRescanning(true);
+    try {
+      const res = await fetch(`${API_URL}/hosts/${hostId}/rescan`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: "{}",
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast({ title: "Scan lanzado", description: "Los daemons se actualizarán en segundos." });
+      // Wait a bit then refresh
+      setTimeout(() => refreshDaemons(), 3000);
+    } catch (err: unknown) {
+      toast({ title: "Error al escanear", description: err instanceof Error ? err.message : "Error desconocido", variant: "destructive" });
+    } finally {
+      setRescanning(false);
+    }
+  };
 
   const buildUrl = (baseUrl: string, path: string) => {
     const normalized = baseUrl.replace(/\/+$/, "");
@@ -281,46 +323,44 @@ const HostDetail = () => {
         {/* Daemons Tab */}
         <TabsContent value="daemons">
           <div className="space-y-6">
-            {/* Remote daemons from daemon_index */}
-            <div className="rounded-lg neon-border bg-card p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-primary" />
-                <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
-                  Remote Daemon Index
-                </h2>
+            {/* Rescan button */}
+            {host.host_url && (
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Usa <span className="text-primary font-mono-cyber">Rescan</span> para sincronizar los daemons del host desde la API.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={rescanHost}
+                  disabled={rescanning}
+                  className="gap-1.5 font-mono-cyber text-xs border-primary/30 hover:border-primary/60 hover:shadow-[0_0_12px_hsl(var(--primary)/0.2)]"
+                >
+                  {rescanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanSearch className="h-3.5 w-3.5" />}
+                  {rescanning ? "Escaneando…" : "Rescan Daemons"}
+                </Button>
               </div>
-
-              {!scanned ? (
-                <p className="text-xs text-muted-foreground py-2">
-                  Pulsa <span className="text-primary font-mono-cyber">"Scan Host"</span> para descubrir los daemons remotos.
-                </p>
-              ) : remoteDaemons.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {remoteDaemons.map((rd, i) => (
-                    <DaemonMiniCard key={rd.id ?? i} daemon={rd} />
-                  ))}
-                </div>
-              ) : wellKnownError ? (
-                <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{wellKnownError}</span>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground py-2">
-                  No se encontraron daemons en el daemon_index del host.
-                </p>
-              )}
-            </div>
+            )}
 
             {/* DB registered daemons */}
-            {daemons.length > 0 && (
-              <div className="rounded-lg neon-border bg-card p-6 space-y-4">
-                <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
-                  Registrados en DB ({daemons.length})
+            <div className="rounded-lg neon-border bg-card p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-primary" />
+                  Daemons en Host ({daemons.length})
                 </h2>
+                <Button variant="ghost" size="sm" onClick={refreshDaemons} className="gap-1 font-mono-cyber text-[10px] h-7">
+                  <RefreshCw className="h-3 w-3" /> Refrescar
+                </Button>
+              </div>
+              {daemons.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No hay daemons registrados para este host. Usa <span className="text-primary font-mono-cyber">Rescan</span> para descubrirlos.
+                </p>
+              ) : (
                 <div className="space-y-2">
                   {daemons.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-md bg-background/50 px-4 py-3 border border-border">
+                    <div key={d.id} className="flex items-center justify-between rounded-md bg-background/50 px-4 py-3 border border-border hover:border-primary/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className={`h-2 w-2 rounded-full ${d.status === "running" ? "bg-neon-success" : d.status === "stopped" ? "bg-destructive" : "bg-muted-foreground"}`} />
                         <div>
@@ -333,6 +373,23 @@ const HostDetail = () => {
                         {d.disabled && <Badge variant="destructive" className="font-mono-cyber text-[10px]">disabled</Badge>}
                       </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Remote daemons from daemon_index */}
+            {scanned && remoteDaemons.length > 0 && (
+              <div className="rounded-lg neon-border bg-card p-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-primary" />
+                  <h2 className="font-mono-cyber text-sm tracking-wide text-foreground/80 uppercase">
+                    Remote Daemon Index ({remoteDaemons.length})
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {remoteDaemons.map((rd, i) => (
+                    <DaemonMiniCard key={rd.id ?? i} daemon={rd} />
                   ))}
                 </div>
               </div>
