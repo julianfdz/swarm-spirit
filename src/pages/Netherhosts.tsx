@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Server, ShieldCheck, ShieldX, Wifi, WifiOff, Plus, Copy, Clock, Search } from "lucide-react";
+import { Server, ShieldCheck, ShieldX, Wifi, WifiOff, Plus, Copy, Clock, Search, Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import {
@@ -207,6 +207,14 @@ const Netherhosts = () => {
                 </p>
               )}
               <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-mono-cyber text-[10px] ${
+                  host.is_public
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  {host.is_public ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                  {host.is_public ? "Público" : "Privado"}
+                </span>
                 {host.domain_cert && (
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 font-mono-cyber text-[10px] text-primary">
                     {host.domain_cert}
