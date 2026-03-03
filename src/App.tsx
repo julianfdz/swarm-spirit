@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import AppDashboard from "./pages/AppDashboard";
 import SwarmView from "./pages/SwarmView";
 import DaemonView from "./pages/DaemonView";
+import Grimoires from "./pages/Grimoires";
 import Netherhosts from "./pages/Netherhosts";
 import HostDetail from "./pages/HostDetail";
 import Settings from "./pages/Settings";
@@ -38,6 +39,7 @@ const App = () => (
                 <Route path="/swarms" element={<AppDashboard />} />
                 <Route path="/swarms/:swarmId" element={<SwarmView />} />
                 <Route path="/swarms/:swarmId/daemon/:daemonId" element={<DaemonView />} />
+                <Route path="/grimoires" element={<Grimoires />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/admin" element={<AdminView />} />
                 <Route path="/profile" element={<ProfileView />} />
