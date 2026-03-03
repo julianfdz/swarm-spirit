@@ -87,6 +87,67 @@ export type Database = {
           },
         ]
       }
+      events: {
+        Row: {
+          correlation_id: string | null
+          created_at: string
+          id: string
+          level: string
+          message: string
+          payload: Json | null
+          source_daemon_id: string | null
+          swarm_id: string | null
+          task_id: string | null
+          type: string
+        }
+        Insert: {
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          payload?: Json | null
+          source_daemon_id?: string | null
+          swarm_id?: string | null
+          task_id?: string | null
+          type: string
+        }
+        Update: {
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          payload?: Json | null
+          source_daemon_id?: string | null
+          swarm_id?: string | null
+          task_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_source_daemon_id_fkey"
+            columns: ["source_daemon_id"]
+            isOneToOne: false
+            referencedRelation: "daemons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_swarm_id_fkey"
+            columns: ["swarm_id"]
+            isOneToOne: false
+            referencedRelation: "swarms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       host_claims: {
         Row: {
           code: string
@@ -363,6 +424,95 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          correlation_id: string | null
+          created_at: string
+          daemon_id: string | null
+          error: string | null
+          host_id: string | null
+          id: string
+          label: string
+          locked_by: string | null
+          max_retries: number
+          payload: Json | null
+          priority: string
+          result: Json | null
+          retries: number
+          status: string
+          swarm_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          correlation_id?: string | null
+          created_at?: string
+          daemon_id?: string | null
+          error?: string | null
+          host_id?: string | null
+          id?: string
+          label: string
+          locked_by?: string | null
+          max_retries?: number
+          payload?: Json | null
+          priority?: string
+          result?: Json | null
+          retries?: number
+          status?: string
+          swarm_id?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          correlation_id?: string | null
+          created_at?: string
+          daemon_id?: string | null
+          error?: string | null
+          host_id?: string | null
+          id?: string
+          label?: string
+          locked_by?: string | null
+          max_retries?: number
+          payload?: Json | null
+          priority?: string
+          result?: Json | null
+          retries?: number
+          status?: string
+          swarm_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_daemon_id_fkey"
+            columns: ["daemon_id"]
+            isOneToOne: false
+            referencedRelation: "daemons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "netherhosts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
+            referencedRelation: "daemons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_swarm_id_fkey"
+            columns: ["swarm_id"]
+            isOneToOne: false
+            referencedRelation: "swarms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -371,6 +521,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       owns_host: { Args: { _host_id: string }; Returns: boolean }
       owns_swarm: { Args: { _swarm_id: string }; Returns: boolean }
+      owns_task: { Args: { _task_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
