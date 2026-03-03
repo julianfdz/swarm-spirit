@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { getTasksForSwarm, PoolTask, TaskStatus, TaskPriority } from "@/data/taskPoolData";
+import CreateTaskDialog from "@/components/CreateTaskDialog";
 import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight } from "lucide-react";
 
 interface Props {
@@ -80,7 +81,9 @@ const TaskPool = ({ swarmId }: Props) => {
             {allTasks.length} tasks · {counts.in_progress || 0} active · {counts.failed || 0} failed
           </p>
         </div>
-        {/* View toggle */}
+        <div className="flex items-center gap-2">
+          <CreateTaskDialog swarmId={swarmId} />
+          {/* View toggle */}
         <div className="flex gap-1 rounded-md border border-border overflow-hidden">
           <button
             onClick={() => setViewMode("pool")}
@@ -98,6 +101,7 @@ const TaskPool = ({ swarmId }: Props) => {
           >
             List
           </button>
+        </div>
         </div>
       </div>
 
