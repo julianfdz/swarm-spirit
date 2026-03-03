@@ -304,6 +304,7 @@ export type Database = {
           domain_cert: string | null
           host_url: string | null
           id: string
+          is_public: boolean
           last_heartbeat: string | null
           name: string
           token: string | null
@@ -316,6 +317,7 @@ export type Database = {
           domain_cert?: string | null
           host_url?: string | null
           id?: string
+          is_public?: boolean
           last_heartbeat?: string | null
           name: string
           token?: string | null
@@ -328,6 +330,7 @@ export type Database = {
           domain_cert?: string | null
           host_url?: string | null
           id?: string
+          is_public?: boolean
           last_heartbeat?: string | null
           name?: string
           token?: string | null
