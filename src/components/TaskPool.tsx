@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { getTasksForSwarm, PoolTask, TaskStatus, TaskPriority } from "@/data/taskPoolData";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
-import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 
 interface Props {
   swarmId: string;
@@ -38,8 +39,51 @@ function getPoolTagColor(type: string, status: TaskStatus): string {
   }
 }
 
+function dbTaskToPoolTask(t: any): PoolTask {
+  return {
+    id: t.id?.slice(0, 6) || t.id,
+    type: t.type || "",
+    label: t.label || "",
+    status: (t.status as TaskStatus) || "pending",
+    priority: (t.priority as TaskPriority) || "medium",
+    retries: t.retries ?? 0,
+    maxRetries: t.max_retries ?? 3,
+    createdAt: t.created_at || "",
+    updatedAt: t.updated_at || "",
+    lockedBy: t.locked_by || null,
+    lockedByName: null, // Could resolve daemon name later
+    correlationId: t.correlation_id || null,
+    error: t.error || null,
+    poolX: Math.random() * 80 + 5,
+    poolY: Math.random() * 70 + 10,
+  };
+}
+
+const MOCK_SWARM_IDS = ["diario-ia-alcantarilla", "customer-ops", "social-media-hive"];
+
 const TaskPool = ({ swarmId }: Props) => {
-  const allTasks = useMemo(() => getTasksForSwarm(swarmId), [swarmId]);
+  const isMockSwarm = MOCK_SWARM_IDS.includes(swarmId);
+  const mockTasks = useMemo(() => (isMockSwarm ? getTasksForSwarm(swarmId) : []), [swarmId, isMockSwarm]);
+  
+  const [dbTasks, setDbTasks] = useState<PoolTask[]>([]);
+  const [loadingDb, setLoadingDb] = useState(!isMockSwarm);
+
+  const fetchDbTasks = useCallback(async () => {
+    if (isMockSwarm) return;
+    setLoadingDb(true);
+    const { data } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("swarm_id", swarmId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (data) setDbTasks(data.map(dbTaskToPoolTask));
+    setLoadingDb(false);
+  }, [swarmId, isMockSwarm]);
+
+  useEffect(() => { fetchDbTasks(); }, [fetchDbTasks]);
+
+  const allTasks = isMockSwarm ? mockTasks : dbTasks;
   const [viewMode, setViewMode] = useState<ViewMode>("pool");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -78,11 +122,20 @@ const TaskPool = ({ swarmId }: Props) => {
         <div>
           <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-primary">Task Pool</h3>
           <p className="mt-1 text-[10px] text-muted-foreground">
-            {allTasks.length} tasks · {counts.in_progress || 0} active · {counts.failed || 0} failed
+            {loadingDb ? "Cargando..." : `${allTasks.length} tasks`} · {counts.in_progress || 0} active · {counts.failed || 0} failed
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateTaskDialog swarmId={swarmId} />
+          {!isMockSwarm && (
+            <button
+              onClick={fetchDbTasks}
+              className="rounded border border-border p-1.5 text-muted-foreground hover:text-primary transition-colors"
+              title="Refrescar"
+            >
+              <RefreshCw className={`h-3 w-3 ${loadingDb ? "animate-spin" : ""}`} />
+            </button>
+          )}
+          <CreateTaskDialog swarmId={swarmId} onCreated={fetchDbTasks} />
           {/* View toggle */}
         <div className="flex gap-1 rounded-md border border-border overflow-hidden">
           <button
