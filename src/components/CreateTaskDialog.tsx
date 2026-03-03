@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,18 @@ const CreateTaskDialog = ({ swarmId, onCreated }: Props) => {
   const [method, setMethod] = useState("tasks/send");
   const [source, setSource] = useState("manual");
   const [payloadStr, setPayloadStr] = useState("{}");
+  const [hosts, setHosts] = useState<{ id: string; name: string; token: string | null }[]>([]);
+  const [selectedHostId, setSelectedHostId] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from("netherhosts").select("id, name, token").then(({ data }) => {
+      if (data) {
+        setHosts(data);
+        if (data.length > 0 && !selectedHostId) setSelectedHostId(data[0].id);
+      }
+    });
+  }, [open]);
 
   const reset = () => {
     setTopic("");
@@ -76,10 +89,19 @@ const CreateTaskDialog = ({ swarmId, onCreated }: Props) => {
     }
 
     setLoading(true);
+    const selectedHost = hosts.find((h) => h.id === selectedHostId);
+    if (!selectedHost?.token) {
+      toast({ title: "Sin token", description: "El host seleccionado no tiene token asignado", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/tasks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${selectedHost.token}`,
+        },
         body: JSON.stringify(result.data),
       });
 
@@ -112,6 +134,27 @@ const CreateTaskDialog = ({ swarmId, onCreated }: Props) => {
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {/* Host selector */}
+          <div className="space-y-1.5">
+            <Label className="font-mono-cyber text-[10px] uppercase text-muted-foreground">Host (auth) *</Label>
+            {hosts.length === 0 ? (
+              <p className="font-mono-cyber text-[10px] text-neon-error">No hay hosts disponibles. Registra un host primero.</p>
+            ) : (
+              <Select value={selectedHostId} onValueChange={setSelectedHostId}>
+                <SelectTrigger className="font-mono-cyber text-xs h-8">
+                  <SelectValue placeholder="Selecciona host" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hosts.map((h) => (
+                    <SelectItem key={h.id} value={h.id} className="font-mono-cyber text-xs">
+                      {h.name} {h.token ? "" : "(sin token)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           {/* Topic (maps to "type" in DB) */}
           <div className="space-y-1.5">
             <Label className="font-mono-cyber text-[10px] uppercase text-muted-foreground">Topic *</Label>
