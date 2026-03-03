@@ -200,8 +200,12 @@ export type Database = {
           disabled: boolean
           host_id: string
           id: string
-          last_seen: string | null
+          invoke_url: string | null
+          last_seen_at: string | null
+          mcp_url: string | null
+          sigil_url: string | null
           status: string
+          status_url: string | null
           updated_at: string
           version: string | null
         }
@@ -211,8 +215,12 @@ export type Database = {
           disabled?: boolean
           host_id: string
           id?: string
-          last_seen?: string | null
+          invoke_url?: string | null
+          last_seen_at?: string | null
+          mcp_url?: string | null
+          sigil_url?: string | null
           status?: string
+          status_url?: string | null
           updated_at?: string
           version?: string | null
         }
@@ -222,8 +230,12 @@ export type Database = {
           disabled?: boolean
           host_id?: string
           id?: string
-          last_seen?: string | null
+          invoke_url?: string | null
+          last_seen_at?: string | null
+          mcp_url?: string | null
+          sigil_url?: string | null
           status?: string
+          status_url?: string | null
           updated_at?: string
           version?: string | null
         }
@@ -426,6 +438,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          claimed_at: string | null
           correlation_id: string | null
           created_at: string
           daemon_id: string | null
@@ -435,16 +448,19 @@ export type Database = {
           label: string
           locked_by: string | null
           max_retries: number
+          method: string | null
           payload: Json | null
           priority: string
           result: Json | null
           retries: number
+          source: string | null
           status: string
           swarm_id: string | null
           type: string
           updated_at: string
         }
         Insert: {
+          claimed_at?: string | null
           correlation_id?: string | null
           created_at?: string
           daemon_id?: string | null
@@ -454,16 +470,19 @@ export type Database = {
           label: string
           locked_by?: string | null
           max_retries?: number
+          method?: string | null
           payload?: Json | null
           priority?: string
           result?: Json | null
           retries?: number
+          source?: string | null
           status?: string
           swarm_id?: string | null
           type: string
           updated_at?: string
         }
         Update: {
+          claimed_at?: string | null
           correlation_id?: string | null
           created_at?: string
           daemon_id?: string | null
@@ -473,10 +492,12 @@ export type Database = {
           label?: string
           locked_by?: string | null
           max_retries?: number
+          method?: string | null
           payload?: Json | null
           priority?: string
           result?: Json | null
           retries?: number
+          source?: string | null
           status?: string
           swarm_id?: string | null
           type?: string
