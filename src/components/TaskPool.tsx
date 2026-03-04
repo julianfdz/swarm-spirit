@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { getTasksForSwarm, PoolTask, TaskStatus, TaskPriority } from "@/data/taskPoolData";
-import CreateTaskDialog from "@/components/CreateTaskDialog";
-import TaskDetailDialog from "@/components/TaskDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight, RefreshCw, Plus } from "lucide-react";
 
 interface Props {
   swarmId: string;
@@ -65,6 +65,7 @@ function dbTaskToPoolTask(t: any): PoolTask & { fullId: string } {
 const MOCK_SWARM_IDS = ["diario-ia-alcantarilla", "customer-ops", "social-media-hive"];
 
 const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
+  const navigate = useNavigate();
   const isMockSwarm = MOCK_SWARM_IDS.includes(swarmId);
   const mockTasks = useMemo(() => (isMockSwarm ? getTasksForSwarm(swarmId) : []), [swarmId, isMockSwarm]);
   
@@ -90,7 +91,6 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
   const [viewMode, setViewMode] = useState<ViewMode>("pool");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [selectedTaskFullId, setSelectedTaskFullId] = useState<string | null>(null);
 
   const filteredTasks = useMemo(() => {
     if (statusFilter === "all") return allTasks;
@@ -139,7 +139,9 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
               <RefreshCw className={`h-3 w-3 ${loadingDb ? "animate-spin" : ""}`} />
             </button>
           )}
-          <CreateTaskDialog swarmId={swarmId} onCreated={fetchDbTasks} swarmDaemons={swarmDaemons} />
+          <Button variant="outline" size="sm" className="font-mono-cyber text-[10px] uppercase gap-1" onClick={() => navigate(`/swarms/${swarmId}/tasks/new`)}>
+            <Plus className="h-3 w-3" /> Nueva Task
+          </Button>
           {/* View toggle */}
         <div className="flex gap-1 rounded-md border border-border overflow-hidden">
           <button
@@ -255,7 +257,7 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
             const pc = priorityConfig[task.priority];
             return (
               <div key={task.id} className="rounded-md border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/30 transition-colors"
-                onClick={() => setSelectedTaskFullId((task as any).fullId || task.id)}>
+                onClick={() => navigate(`/tasks/${(task as any).fullId || task.id}?back=/swarms/${swarmId}`)}>
                 {/* Main row */}
                 <div className="flex items-center gap-2 px-3 py-2">
                   <button onClick={() => toggleExpand(task.id)} className="text-muted-foreground hover:text-foreground shrink-0">
@@ -348,7 +350,7 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
         </div>
       )}
 
-      <TaskDetailDialog taskId={selectedTaskFullId} onClose={() => setSelectedTaskFullId(null)} />
+      {/* Navigation-based task detail now */}
     </div>
   );
 };
