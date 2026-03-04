@@ -74,7 +74,8 @@ const HostDaemonView = () => {
     if (/^https?:\/\//i.test(raw)) return raw;
     // Relative path → prepend host_url
     const hostBase = daemon.netherhosts?.host_url?.replace(/\/+$/, "") ?? "";
-    return hostBase ? `${hostBase}${raw.startsWith("/") ? "" : "/"}${raw}` : null;
+    const full = hostBase ? `${hostBase}${raw.startsWith("/") ? "" : "/"}${raw}` : null;
+    return full ? encodeURI(decodeURI(full)) : null;
   }, [daemon?.avatar_url, daemon?.netherhosts?.host_url]);
 
   // Avatar: fetch from avatar_url, cache as blob URL
