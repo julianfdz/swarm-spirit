@@ -156,11 +156,25 @@ const TaskDetailView = () => {
 
     if (Object.keys(updates).length === 0) { setSaving(false); return; }
 
-    const ok = await patchViaApi(updates);
-    if (ok) {
-      toast({ title: "Task actualizada" });
-      fetchAll();
+    // Try API first, then always persist to Supabase directly
+    let apiOk = false;
+    try {
+      apiOk = await patchViaApi(updates);
+    } catch { /* API may be unavailable */ }
+
+    // Always update Supabase DB directly to ensure persistence
+    const { error: dbError } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", taskId);
+
+    if (dbError) {
+      toast({ title: "Error guardando en BD", description: dbError.message, variant: "destructive" });
+    } else {
+      toast({ title: "Task actualizada", description: apiOk ? "Sincronizado con API y BD" : "Guardado en BD (API no disponible)" });
     }
+
+    await fetchAll();
     setSaving(false);
   };
 
