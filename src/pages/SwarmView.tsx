@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { swarms as mockSwarms, Daemon } from "@/data/mockData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import EventStream from "@/components/EventStream";
 import TaskPool from "@/components/TaskPool";
+import { DaemonCard } from "@/components/DaemonCard";
 import type { Tables } from "@/integrations/supabase/types";
 
 import daemonScraper from "@/assets/daemon-scraper.png";
@@ -62,7 +63,9 @@ const isVideoUrl = (url: string) => /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
 const SwarmView = () => {
   const { swarmId } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<SwarmTab>("daemons");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get("tab") as SwarmTab) || "daemons";
+  const [tab, setTab] = useState<SwarmTab>(initialTab);
   const [loading, setLoading] = useState(true);
   const [dbSwarm, setDbSwarm] = useState<{ id: string; name: string; description: string | null } | null>(null);
   const [realDaemons, setRealDaemons] = useState<HostDaemon[]>([]);
@@ -187,36 +190,25 @@ const SwarmView = () => {
             <p className="text-sm text-muted-foreground">No hay daemons asignados a este swarm todavía.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {realDaemons.map((daemon, i) => {
+          <div className="daemon-grid">
+            {realDaemons.map((daemon) => {
               const avatarUrl = resolveAvatarUrl(daemon);
               return (
-                <button
+                <DaemonCard
                   key={daemon.id}
+                  daemon={{
+                    id: daemon.id,
+                    name: daemon.name,
+                    description: daemon.description,
+                    status: daemon.status,
+                    avatar_url: avatarUrl,
+                    version: daemon.version,
+                    visibility: daemon.visibility,
+                    host_name: daemon.netherhosts?.name ?? null,
+                  }}
                   onClick={() => navigate(`/daemons/${daemon.id}`)}
-                  className="group relative flex flex-col items-center border border-border bg-card p-4 transition-all hover:neon-glow hover:z-10"
-                >
-                  {avatarUrl && isVideoUrl(avatarUrl) ? (
-                    <video src={avatarUrl} className="mb-3 h-24 w-24 rounded-sm object-cover" autoPlay loop muted playsInline />
-                  ) : (
-                    <img
-                      src={avatarUrl ?? placeholders[i % placeholders.length]}
-                      alt={daemon.name}
-                      className="mb-3 h-24 w-24 rounded-sm object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).src = placeholders[i % placeholders.length]; }}
-                    />
-                  )}
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`h-2 w-2 rounded-full ${statusColor(daemon.status)}`} />
-                    <Badge variant="outline" className="font-mono-cyber text-[10px]">{daemon.status}</Badge>
-                  </div>
-                  <h4 className="mt-1 font-mono-cyber text-xs tracking-wide text-foreground group-hover:text-primary transition-colors text-center">
-                    {daemon.name}
-                  </h4>
-                  {daemon.description && (
-                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2 text-center">{daemon.description}</p>
-                  )}
-                </button>
+                  glitchEffect={true}
+                />
               );
             })}
           </div>

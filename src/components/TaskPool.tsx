@@ -139,7 +139,7 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
               <RefreshCw className={`h-3 w-3 ${loadingDb ? "animate-spin" : ""}`} />
             </button>
           )}
-          <Button variant="outline" size="sm" className="font-mono-cyber text-[10px] uppercase gap-1" onClick={() => navigate(`/swarms/${swarmId}/tasks/new`)}>
+          <Button variant="outline" size="sm" className="font-mono-cyber text-[10px] uppercase gap-1" onClick={() => navigate(`/swarms/${swarmId}/tasks/new?back=${encodeURIComponent(`/swarms/${swarmId}?tab=task-pool`)}`)}>
             <Plus className="h-3 w-3" /> Nueva Task
           </Button>
           {/* View toggle */}
