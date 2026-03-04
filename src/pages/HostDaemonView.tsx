@@ -66,10 +66,21 @@ const HostDaemonView = () => {
     })();
   }, [daemonId]);
 
+  // Resolve avatar_url (may be relative to host)
+  const resolvedAvatarUrl = useMemo(() => {
+    if (!daemon?.avatar_url) return null;
+    const raw = daemon.avatar_url;
+    // Already absolute
+    if (/^https?:\/\//i.test(raw)) return raw;
+    // Relative path → prepend host_url
+    const hostBase = daemon.netherhosts?.host_url?.replace(/\/+$/, "") ?? "";
+    return hostBase ? `${hostBase}${raw.startsWith("/") ? "" : "/"}${raw}` : null;
+  }, [daemon?.avatar_url, daemon?.netherhosts?.host_url]);
+
   // Avatar: fetch from avatar_url, cache as blob URL
   useEffect(() => {
     if (!daemon) return;
-    const url = daemon.avatar_url;
+    const url = resolvedAvatarUrl;
     if (!url) { setCachedAvatarSrc(null); return; }
 
     // Check cache
@@ -92,12 +103,12 @@ const HostDaemonView = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [daemon?.avatar_url]);
+  }, [resolvedAvatarUrl]);
 
   // Determine final avatar source
   const avatarSrc = cachedAvatarSrc ?? null;
-  const isVideo = daemon?.avatar_url
-    ? /\.(mp4|webm|mov|ogg)(\?|$)/i.test(daemon.avatar_url)
+  const isVideo = resolvedAvatarUrl
+    ? /\.(mp4|webm|mov|ogg)(\?|$)/i.test(resolvedAvatarUrl)
     : false;
   const placeholderSrc = useMemo(
     () => placeholders[Math.abs((daemonId ?? "").charCodeAt(0)) % placeholders.length],
