@@ -66,7 +66,7 @@ const TaskDetailView = () => {
 
   const fetchAll = async (showLoading = false) => {
     if (!taskId) return;
-    if (showLoading) setLoadingDb(true);
+    if (showLoading && !dbTask) setLoadingDb(true);
     const { data } = await supabase.from("tasks").select("*").eq("id", taskId).maybeSingle();
     setDbTask(data);
     setEditedFields({});
@@ -109,7 +109,7 @@ const TaskDetailView = () => {
     }
   };
 
-  useEffect(() => { fetchAll(!dbTask); }, [taskId]);
+  useEffect(() => { fetchAll(true); }, [taskId]);
 
   const handleFieldChange = (key: string, value: any) => {
     setEditedFields((prev) => ({ ...prev, [key]: value }));
@@ -222,14 +222,14 @@ const TaskDetailView = () => {
         </div>
       </div>
 
-      {loadingDb ? (
+      {loadingDb && !dbTask ? (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />)}
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-14 rounded-lg border border-border bg-muted/30 animate-pulse" />)}
         </div>
       ) : !dbTask ? (
         <p className="font-mono-cyber text-sm text-destructive">No se encontró la task en BBDD</p>
       ) : (
-        <div className="space-y-6">
+        <div className={`space-y-6 transition-opacity duration-200 ${loadingDb ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
           {/* Status banner */}
           <div className={`rounded-lg border p-4 flex items-center justify-between ${
             dbTask.status === "completed" ? "border-neon-success/30 bg-neon-success/5" :
