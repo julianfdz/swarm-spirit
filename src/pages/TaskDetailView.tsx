@@ -54,7 +54,7 @@ const TaskDetailView = () => {
   const [dbTask, setDbTask] = useState<Record<string, any> | null>(null);
   const [editedFields, setEditedFields] = useState<Record<string, any>>({});
   const [apiResponse, setApiResponse] = useState<string | null>(null);
-  const [loadingDb, setLoadingDb] = useState(true);
+  const [loadingDb, setLoadingDb] = useState(false);
   const [loadingApi, setLoadingApi] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,9 +64,9 @@ const TaskDetailView = () => {
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const fetchAll = async (showLoading = false) => {
+  const fetchAll = async () => {
     if (!taskId) return;
-    if (showLoading && !dbTask) setLoadingDb(true);
+    setLoadingDb(true);
     const { data } = await supabase.from("tasks").select("*").eq("id", taskId).maybeSingle();
     setDbTask(data);
     setEditedFields({});
@@ -109,7 +109,7 @@ const TaskDetailView = () => {
     }
   };
 
-  useEffect(() => { fetchAll(true); }, [taskId]);
+  useEffect(() => { fetchAll(); }, [taskId]);
 
   const handleFieldChange = (key: string, value: any) => {
     setEditedFields((prev) => ({ ...prev, [key]: value }));
@@ -222,12 +222,14 @@ const TaskDetailView = () => {
         </div>
       </div>
 
-      {loadingDb && !dbTask ? (
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="h-14 rounded-lg border border-border bg-muted/30 animate-pulse" />)}
-        </div>
-      ) : !dbTask ? (
-        <p className="font-mono-cyber text-sm text-destructive">No se encontró la task en BBDD</p>
+      {!dbTask ? (
+        loadingDb ? (
+          <div className="flex items-center justify-center py-20">
+            <RefreshCw className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        ) : (
+          <p className="font-mono-cyber text-sm text-destructive">No se encontró la task en BBDD</p>
+        )
       ) : (
         <div className={`space-y-6 transition-opacity duration-200 ${loadingDb ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
           {/* Status banner */}
