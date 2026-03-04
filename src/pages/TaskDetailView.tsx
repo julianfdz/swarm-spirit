@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, RefreshCw, Save, Clock, Calendar } from "lucide-react";
+import { ArrowLeft, RefreshCw, Save, Clock, Calendar, Pause, Play, XCircle, List } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_NETHERNET_API_URL || "https://nethernet-api.buhosuite.com/api/v1";
 
@@ -40,6 +40,11 @@ const SCHEDULE_FIELDS = [
   { key: "last_run_at", label: "Last Run At", editable: false },
 ];
 
+const getHostToken = async (): Promise<string | null> => {
+  const { data: hosts } = await supabase.from("netherhosts").select("id, token");
+  return hosts?.find((h) => h.token)?.token ?? null;
+};
+
 const TaskDetailView = () => {
   const { taskId } = useParams();
   const navigate = useNavigate();
@@ -55,6 +60,9 @@ const TaskDetailView = () => {
   const [saving, setSaving] = useState(false);
   const [payloadStr, setPayloadStr] = useState("{}");
   const [resultStr, setResultStr] = useState("null");
+  const [childTasks, setChildTasks] = useState<any[]>([]);
+  const [loadingChildren, setLoadingChildren] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchAll = async () => {
     if (!taskId) return;
@@ -68,21 +76,36 @@ const TaskDetailView = () => {
     }
     setLoadingDb(false);
 
-    // Fetch API
+    // Fetch API response
     setLoadingApi(true);
     setApiError(null);
     setApiResponse(null);
     try {
-      const { data: hosts } = await supabase.from("netherhosts").select("id, token");
-      const host = hosts?.find((h) => h.token);
-      if (!host?.token) { setApiError("No hay host con token"); setLoadingApi(false); return; }
-      const res = await fetch(`${API_URL}/tasks/${taskId}`, { headers: { Authorization: `Bearer ${host.token}` } });
+      const token = await getHostToken();
+      if (!token) { setApiError("No hay host con token"); setLoadingApi(false); return; }
+      const res = await fetch(`${API_URL}/tasks/${taskId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) setApiError(`HTTP ${res.status}: ${await res.text()}`);
       else setApiResponse(JSON.stringify(await res.json(), null, 2));
     } catch (e: any) {
       setApiError(e.message);
     } finally {
       setLoadingApi(false);
+    }
+
+    // Fetch child executions if template
+    if (data?.is_template) {
+      setLoadingChildren(true);
+      try {
+        const token = await getHostToken();
+        if (token) {
+          const res = await fetch(`${API_URL}/tasks?correlation_id=${taskId}`, { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const json = await res.json();
+            setChildTasks(Array.isArray(json) ? json : json.tasks ?? json.data ?? []);
+          }
+        }
+      } catch { /* ignore */ }
+      setLoadingChildren(false);
     }
   };
 
@@ -99,13 +122,28 @@ const TaskDetailView = () => {
 
   const hasChanges = Object.keys(editedFields).length > 0 || (dbTask && payloadStr !== JSON.stringify(dbTask.payload, null, 2));
 
+  const patchViaApi = async (body: Record<string, any>) => {
+    const token = await getHostToken();
+    if (!token) { toast({ title: "Sin token", variant: "destructive" }); return false; }
+    const res = await fetch(`${API_URL}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      toast({ title: "Error API", description: err, variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     if (!taskId || !dbTask) return;
     setSaving(true);
 
     const updates: Record<string, any> = { ...editedFields };
 
-    // Parse payload if changed
     if (payloadStr !== JSON.stringify(dbTask.payload, null, 2)) {
       try {
         updates.payload = JSON.parse(payloadStr);
@@ -118,14 +156,27 @@ const TaskDetailView = () => {
 
     if (Object.keys(updates).length === 0) { setSaving(false); return; }
 
-    const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
-    if (error) {
-      toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
-    } else {
+    const ok = await patchViaApi(updates);
+    if (ok) {
       toast({ title: "Task actualizada" });
       fetchAll();
     }
     setSaving(false);
+  };
+
+  const handleAction = async (action: string) => {
+    setActionLoading(action);
+    let body: Record<string, any> = {};
+    if (action === "pause") body = { status: "cancelled" };
+    else if (action === "resume") body = { status: "scheduled" };
+    else if (action === "cancel") body = { status: "cancelled" };
+
+    const ok = await patchViaApi(body);
+    if (ok) {
+      toast({ title: action === "pause" ? "Template pausado" : action === "resume" ? "Template reactivado" : "Task cancelada" });
+      fetchAll();
+    }
+    setActionLoading(null);
   };
 
   const isScheduled = dbTask?.is_template || dbTask?.schedule_type;
@@ -138,9 +189,7 @@ const TaskDetailView = () => {
 
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="font-mono-cyber text-xl tracking-wide text-foreground">
-            Task Detail
-          </h2>
+          <h2 className="font-mono-cyber text-xl tracking-wide text-foreground">Task Detail</h2>
           {dbTask && (
             <p className="mt-1 text-sm text-muted-foreground font-mono-cyber">
               {dbTask.label} <span className="text-muted-foreground/50">· {dbTask.id?.slice(0, 8)}…</span>
@@ -190,9 +239,27 @@ const TaskDetailView = () => {
                 </span>
               )}
             </div>
-            <span className="font-mono-cyber text-[10px] text-muted-foreground">
-              Retries: {dbTask.retries}/{dbTask.max_retries}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono-cyber text-[10px] text-muted-foreground">
+                Retries: {dbTask.retries}/{dbTask.max_retries}
+              </span>
+              {/* Template actions */}
+              {isScheduled && dbTask.status === "scheduled" && (
+                <Button variant="outline" size="sm" onClick={() => handleAction("pause")} disabled={!!actionLoading} className="font-mono-cyber text-[10px] uppercase gap-1 border-neon-warning/30 text-neon-warning hover:bg-neon-warning/10">
+                  <Pause className="h-3 w-3" /> Pausar
+                </Button>
+              )}
+              {isScheduled && dbTask.status === "cancelled" && (
+                <Button variant="outline" size="sm" onClick={() => handleAction("resume")} disabled={!!actionLoading} className="font-mono-cyber text-[10px] uppercase gap-1 border-neon-success/30 text-neon-success hover:bg-neon-success/10">
+                  <Play className="h-3 w-3" /> Reactivar
+                </Button>
+              )}
+              {!isScheduled && (dbTask.status === "pending" || dbTask.status === "in_progress") && (
+                <Button variant="outline" size="sm" onClick={() => handleAction("cancel")} disabled={!!actionLoading} className="font-mono-cyber text-[10px] uppercase gap-1 border-neon-error/30 text-neon-error hover:bg-neon-error/10">
+                  <XCircle className="h-3 w-3" /> Cancelar
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* DB Fields */}
@@ -230,7 +297,7 @@ const TaskDetailView = () => {
             </div>
           </section>
 
-          {/* Schedule fields (if applicable) */}
+          {/* Schedule fields */}
           {isScheduled && (
             <section className="rounded-lg border border-neon-warning/20 bg-neon-warning/5 p-6 space-y-4">
               <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-neon-warning/70 flex items-center gap-2">
@@ -256,6 +323,40 @@ const TaskDetailView = () => {
                   </div>
                 ))}
               </div>
+            </section>
+          )}
+
+          {/* Child executions (for templates) */}
+          {isScheduled && (
+            <section className="rounded-lg border border-border bg-card p-6 space-y-4">
+              <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-primary/70 flex items-center gap-2">
+                <List className="h-3.5 w-3.5" /> Ejecuciones ({childTasks.length})
+              </h3>
+              {loadingChildren ? (
+                <div className="h-12 rounded-md bg-muted animate-pulse" />
+              ) : childTasks.length === 0 ? (
+                <p className="font-mono-cyber text-[11px] text-muted-foreground">No hay ejecuciones registradas aún.</p>
+              ) : (
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {childTasks.map((child: any, i: number) => (
+                    <button
+                      key={child.id || i}
+                      onClick={() => navigate(`/tasks/${child.id}?back=/tasks/${taskId}`)}
+                      className="w-full flex items-center gap-3 rounded-md border border-border bg-background/50 px-3 py-2 text-left hover:border-primary/30 transition-colors"
+                    >
+                      <div className={`h-2 w-2 rounded-full shrink-0 ${
+                        child.status === "completed" ? "bg-neon-success" :
+                        child.status === "failed" || child.status === "dlq" ? "bg-neon-error" :
+                        child.status === "in_progress" ? "bg-primary" :
+                        "bg-muted-foreground"
+                      }`} />
+                      <span className="font-mono-cyber text-[10px] text-muted-foreground">{child.id?.slice(0, 8)}…</span>
+                      <span className="font-mono-cyber text-[10px] uppercase">{child.status}</span>
+                      <span className="font-mono-cyber text-[10px] text-muted-foreground ml-auto">{child.created_at?.slice(0, 19)?.replace("T", " ")}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 

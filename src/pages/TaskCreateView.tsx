@@ -155,7 +155,6 @@ const TaskCreateView = () => {
       ...(swarmId ? { swarm_id: swarmId } : {}),
       ...(daemonId && daemonId !== "__none__" ? { daemon_id: daemonId } : {}),
       ...(schedule ? {
-        is_template: true,
         schedule_type: schedule.type,
         schedule_value: schedule.value,
       } : {}),
