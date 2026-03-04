@@ -224,7 +224,7 @@ const SwarmView = () => {
       )}
 
       {tab === "event-stream" && <EventStream swarmId={swarmId!} />}
-      {tab === "task-pool" && <TaskPool swarmId={swarmId!} />}
+      {tab === "task-pool" && <TaskPool swarmId={swarmId!} swarmDaemons={realDaemons.map(d => ({ id: d.id, name: d.name, daemon_ref: d.daemon_ref }))} />}
     </main>
   );
 };

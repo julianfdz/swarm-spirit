@@ -6,6 +6,7 @@ import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight, RefreshC
 
 interface Props {
   swarmId: string;
+  swarmDaemons?: { id: string; name: string; daemon_ref: string | null }[];
 }
 
 type ViewMode = "list" | "pool";
@@ -61,7 +62,7 @@ function dbTaskToPoolTask(t: any): PoolTask {
 
 const MOCK_SWARM_IDS = ["diario-ia-alcantarilla", "customer-ops", "social-media-hive"];
 
-const TaskPool = ({ swarmId }: Props) => {
+const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
   const isMockSwarm = MOCK_SWARM_IDS.includes(swarmId);
   const mockTasks = useMemo(() => (isMockSwarm ? getTasksForSwarm(swarmId) : []), [swarmId, isMockSwarm]);
   
@@ -135,7 +136,7 @@ const TaskPool = ({ swarmId }: Props) => {
               <RefreshCw className={`h-3 w-3 ${loadingDb ? "animate-spin" : ""}`} />
             </button>
           )}
-          <CreateTaskDialog swarmId={swarmId} onCreated={fetchDbTasks} />
+          <CreateTaskDialog swarmId={swarmId} onCreated={fetchDbTasks} swarmDaemons={swarmDaemons} />
           {/* View toggle */}
         <div className="flex gap-1 rounded-md border border-border overflow-hidden">
           <button
