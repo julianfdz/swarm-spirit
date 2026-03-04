@@ -116,9 +116,34 @@ const DaemonView = () => {
 
   return (
     <div className="flex h-full flex-col md:flex-row overflow-hidden">
-      {/* Left: Avatar - fixed */}
-      <div className="flex shrink-0 items-center justify-center border-b border-border bg-card p-8 md:w-1/3 md:border-b-0 md:border-r">
-        <img src={daemon.avatar} alt={daemon.name} className="h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+      {/* Left: Avatar with glitch effect */}
+      <div className="flex shrink-0 items-center justify-center border-b border-border bg-card p-8 md:w-1/3 md:border-b-0 md:border-r relative overflow-hidden">
+        {/* Scanline sweep */}
+        <div
+          className="absolute inset-x-0 h-20 pointer-events-none opacity-0 transition-opacity"
+          style={{
+            background: localStatus === "running"
+              ? "linear-gradient(180deg, transparent, rgba(0,255,170,0.07), transparent)"
+              : localStatus === "error"
+              ? "linear-gradient(180deg, transparent, rgba(255,0,128,0.07), transparent)"
+              : "linear-gradient(180deg, transparent, rgba(0,240,255,0.07), transparent)",
+            animation: "card-scan 1.8s ease-in-out infinite",
+            opacity: 0.8,
+          }}
+        />
+
+        {/* Corner brackets */}
+        <span className="card-corner tl" style={{ borderColor: localStatus === "running" ? "var(--neon-green)" : localStatus === "error" ? "var(--neon-pink)" : "var(--neon-cyan)" }} />
+        <span className="card-corner tr" style={{ borderColor: localStatus === "running" ? "var(--neon-green)" : localStatus === "error" ? "var(--neon-pink)" : "var(--neon-cyan)" }} />
+        <span className="card-corner bl" style={{ borderColor: localStatus === "running" ? "var(--neon-green)" : localStatus === "error" ? "var(--neon-pink)" : "var(--neon-cyan)" }} />
+        <span className="card-corner br" style={{ borderColor: localStatus === "running" ? "var(--neon-green)" : localStatus === "error" ? "var(--neon-pink)" : "var(--neon-cyan)" }} />
+
+        <div className="glitch-avatar relative">
+          <img src={daemon.avatar} alt={daemon.name} className="glitch-main h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+          <img src={daemon.avatar} alt="" className="glitch-r h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+          <img src={daemon.avatar} alt="" className="glitch-g h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+          <img src={daemon.avatar} alt="" className="glitch-b h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+        </div>
       </div>
 
       {/* Right: Info - only this scrolls */}
