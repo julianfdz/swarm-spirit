@@ -20,6 +20,8 @@ import Settings from "./pages/Settings";
 import AdminView from "./pages/AdminView";
 import ProfileView from "./pages/ProfileView";
 import NotFound from "./pages/NotFound";
+import TaskCreateView from "./pages/TaskCreateView";
+import TaskDetailView from "./pages/TaskDetailView";
 import AppLayout from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,8 @@ const App = () => (
                 <Route path="/swarms" element={<AppDashboard />} />
                 <Route path="/swarms/:swarmId" element={<SwarmView />} />
                 <Route path="/swarms/:swarmId/daemon/:daemonId" element={<DaemonView />} />
+                <Route path="/swarms/:swarmId/tasks/new" element={<TaskCreateView />} />
+                <Route path="/tasks/:taskId" element={<TaskDetailView />} />
                 <Route path="/grimoires" element={<Grimoires />} />
                 <Route path="/daemons" element={<DaemonsCatalogue />} />
                 <Route path="/daemons/:daemonId" element={<HostDaemonView />} />
