@@ -32,9 +32,6 @@ type HostDaemon = Tables<"host_daemons"> & {
 
 type Tab = "info" | "sigil" | "capabilities" | "urls" | "status";
 
-// Simple in-memory cache for avatar URLs
-const avatarCache = new Map<string, string>();
-
 const HostDaemonView = () => {
   const { daemonId } = useParams<{ daemonId: string }>();
   const navigate = useNavigate();
@@ -44,7 +41,6 @@ const HostDaemonView = () => {
   const [tab, setTab] = useState<Tab>("info");
   const [sigilData, setSigilData] = useState<Record<string, unknown> | null>(null);
   const [sigilLoading, setSigilLoading] = useState(false);
-  const [cachedAvatarSrc, setCachedAvatarSrc] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
 
   // Fetch daemon data
@@ -78,36 +74,8 @@ const HostDaemonView = () => {
     return full ? encodeURI(decodeURI(full)) : null;
   }, [daemon?.avatar_url, daemon?.netherhosts?.host_url]);
 
-  // Avatar: fetch from avatar_url, cache as blob URL
-  useEffect(() => {
-    if (!daemon) return;
-    const url = resolvedAvatarUrl;
-    if (!url) { setCachedAvatarSrc(null); return; }
-
-    // Check cache
-    if (avatarCache.has(url)) {
-      setCachedAvatarSrc(avatarCache.get(url)!);
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(url, { cache: "force-cache" });
-        if (!res.ok) throw new Error("fetch failed");
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        avatarCache.set(url, blobUrl);
-        if (!cancelled) setCachedAvatarSrc(blobUrl);
-      } catch {
-        if (!cancelled) setAvatarError(true);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [resolvedAvatarUrl]);
-
-  // Determine final avatar source
-  const avatarSrc = cachedAvatarSrc ?? null;
+  // Use URL directly (no fetch — avoids CORS). Browser media elements load cross-origin fine.
+  const avatarSrc = resolvedAvatarUrl;
   const isVideo = resolvedAvatarUrl
     ? /\.(mp4|webm|mov|ogg)(\?|$)/i.test(resolvedAvatarUrl)
     : false;
