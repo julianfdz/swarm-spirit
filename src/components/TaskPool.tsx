@@ -13,13 +13,17 @@ interface Props {
 type ViewMode = "list" | "pool";
 type StatusFilter = "all" | TaskStatus;
 
-const statusConfig: Record<TaskStatus, { label: string; class: string; dotClass: string }> = {
+const statusConfig: Record<string, { label: string; class: string; dotClass: string }> = {
   pending: { label: "Pending", class: "bg-neon-warning/15 text-neon-warning", dotClass: "bg-neon-warning" },
   in_progress: { label: "In Progress", class: "bg-primary/15 text-primary", dotClass: "bg-primary" },
   completed: { label: "Done", class: "bg-neon-success/15 text-neon-success", dotClass: "bg-neon-success" },
   failed: { label: "Failed", class: "bg-neon-error/15 text-neon-error", dotClass: "bg-neon-error" },
   dlq: { label: "DLQ", class: "bg-accent/15 text-accent", dotClass: "bg-accent" },
+  scheduled: { label: "Scheduled", class: "bg-primary/15 text-primary", dotClass: "bg-primary" },
+  cancelled: { label: "Cancelled", class: "bg-muted-foreground/15 text-muted-foreground", dotClass: "bg-muted-foreground" },
 };
+
+const fallbackStatus = { label: "Unknown", class: "bg-muted/15 text-muted-foreground", dotClass: "bg-muted-foreground" };
 
 const priorityConfig: Record<TaskPriority, { label: string; class: string }> = {
   critical: { label: "CRIT", class: "text-neon-error border-neon-error/40" },
@@ -253,8 +257,8 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
         <div className="space-y-1">
           {filteredTasks.map((task) => {
             const isExpanded = expandedTasks.has(task.id);
-            const sc = statusConfig[task.status];
-            const pc = priorityConfig[task.priority];
+            const sc = statusConfig[task.status] || fallbackStatus;
+            const pc = priorityConfig[task.priority] || { label: task.priority, class: "text-muted-foreground border-border" };
             return (
               <div key={task.id} className="rounded-md border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/30 transition-colors"
                 onClick={() => navigate(`/tasks/${(task as any).fullId || task.id}?back=/swarms/${swarmId}`)}>
