@@ -23,12 +23,14 @@ import NotFound from "./pages/NotFound";
 import TaskCreateView from "./pages/TaskCreateView";
 import TaskDetailView from "./pages/TaskDetailView";
 import AppLayout from "./components/AppLayout";
+import { GlitchSvgDefs } from "./components/GlitchSvgDefs";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
+      <GlitchSvgDefs />
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
