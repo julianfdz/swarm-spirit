@@ -195,6 +195,7 @@ export type Database = {
       }
       host_daemons: {
         Row: {
+          avatar_url: string | null
           capabilities: Json | null
           daemon_id: string | null
           daemon_ref: string | null
@@ -206,6 +207,7 @@ export type Database = {
           last_seen_at: string | null
           mcp_url: string | null
           name: string
+          sigil_json: Json | null
           sigil_url: string | null
           status: string
           status_url: string | null
@@ -214,6 +216,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          avatar_url?: string | null
           capabilities?: Json | null
           daemon_id?: string | null
           daemon_ref?: string | null
@@ -225,6 +228,7 @@ export type Database = {
           last_seen_at?: string | null
           mcp_url?: string | null
           name: string
+          sigil_json?: Json | null
           sigil_url?: string | null
           status?: string
           status_url?: string | null
@@ -233,6 +237,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          avatar_url?: string | null
           capabilities?: Json | null
           daemon_id?: string | null
           daemon_ref?: string | null
@@ -244,6 +249,7 @@ export type Database = {
           last_seen_at?: string | null
           mcp_url?: string | null
           name?: string
+          sigil_json?: Json | null
           sigil_url?: string | null
           status?: string
           status_url?: string | null
