@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, Eye, EyeOff, RefreshCw, X, Calendar, Clock, Hash } from "lucide-react";
+import { Bot, Eye, EyeOff, RefreshCw, Calendar, Clock, Hash, Server, Globe, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import type { Tables } from "@/integrations/supabase/types";
 
-// Mock avatars — cycle through available daemon images
 import daemonScraper from "@/assets/daemon-scraper.png";
 import daemonWriter from "@/assets/daemon-writer.png";
 import daemonPublisher from "@/assets/daemon-publisher.png";
@@ -28,21 +27,23 @@ const mockAvatars = [
   daemonAnalyst, daemonSupport, daemonSocial, daemonScheduler,
 ];
 
-type Daemon = Tables<"daemons">;
+type HostDaemon = Tables<"host_daemons"> & {
+  netherhosts?: { name: string; host_url: string | null } | null;
+};
 
 const DaemonsCatalogue = () => {
-  const [daemons, setDaemons] = useState<Daemon[]>([]);
+  const [daemons, setDaemons] = useState<HostDaemon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Daemon | null>(null);
+  const [selected, setSelected] = useState<HostDaemon | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from("daemons")
-      .select("*")
-      .is("deleted_at", null)
+      .from("host_daemons")
+      .select("*, netherhosts(name, host_url)")
+      .eq("disabled", false)
       .order("updated_at", { ascending: false });
-    setDaemons(data ?? []);
+    setDaemons((data as HostDaemon[]) ?? []);
     setLoading(false);
   };
 
@@ -54,6 +55,9 @@ const DaemonsCatalogue = () => {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  const statusColor = (s: string) =>
+    s === "running" ? "bg-neon-success" : s === "stopped" ? "bg-destructive" : "bg-muted-foreground";
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-10 md:px-12 space-y-6">
       <div className="flex items-center justify-between">
@@ -63,7 +67,7 @@ const DaemonsCatalogue = () => {
             Catálogo de Daemons
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Todos tus daemons registrados. Pulsa en uno para ver su detalle completo.
+            Todos los daemons desplegados en tus hosts. Pulsa en uno para ver su detalle completo.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchAll} className="gap-1.5 font-mono-cyber text-xs">
@@ -71,7 +75,6 @@ const DaemonsCatalogue = () => {
         </Button>
       </div>
 
-      {/* Cards Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -81,7 +84,7 @@ const DaemonsCatalogue = () => {
       ) : daemons.length === 0 ? (
         <div className="rounded-lg neon-border bg-card p-12 text-center">
           <Bot className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No tienes daemons registrados.</p>
+          <p className="text-sm text-muted-foreground">No hay daemons registrados en tus hosts.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -91,20 +94,24 @@ const DaemonsCatalogue = () => {
               onClick={() => setSelected(daemon)}
               className="group relative flex flex-col items-center border border-border bg-card p-5 transition-all hover:neon-glow hover:z-10"
             >
-              <img
-                src={getAvatar(i)}
-                alt={daemon.name}
-                className="mb-3 h-24 w-24 rounded-sm object-cover"
-              />
-              <Badge variant="outline" className="font-mono-cyber text-[10px] gap-1 mb-2">
-                {daemon.visibility === "public" ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
-                {daemon.visibility}
-              </Badge>
+              <img src={getAvatar(i)} alt={daemon.name} className="mb-3 h-24 w-24 rounded-sm object-cover" />
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`h-2 w-2 rounded-full ${statusColor(daemon.status)}`} />
+                <Badge variant="outline" className="font-mono-cyber text-[10px] gap-1">
+                  {daemon.visibility === "public" ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
+                  {daemon.visibility}
+                </Badge>
+              </div>
               <h4 className="font-mono-cyber text-xs tracking-wide text-foreground group-hover:text-primary transition-colors text-center">
                 {daemon.name}
               </h4>
               {daemon.description && (
                 <p className="mt-1 text-[10px] text-muted-foreground text-center line-clamp-2">{daemon.description}</p>
+              )}
+              {daemon.netherhosts && (
+                <p className="mt-1.5 text-[10px] text-primary/70 font-mono-cyber flex items-center gap-1">
+                  <Server className="h-2.5 w-2.5" /> {daemon.netherhosts.name}
+                </p>
               )}
               <p className="mt-2 text-[10px] text-muted-foreground">
                 {new Date(daemon.updated_at).toLocaleDateString("es-ES")}
@@ -142,14 +149,41 @@ const DaemonsCatalogue = () => {
                     label="Visibilidad"
                     value={selected.visibility}
                   />
-                  <InfoBlock icon={<Calendar className="h-3.5 w-3.5" />} label="Creado" value={formatDate(selected.created_at)} />
-                  <InfoBlock icon={<Clock className="h-3.5 w-3.5" />} label="Actualizado" value={formatDate(selected.updated_at)} />
+                  <InfoBlock icon={<Calendar className="h-3.5 w-3.5" />} label="Actualizado" value={formatDate(selected.updated_at)} />
+                  <InfoBlock
+                    icon={<div className={`h-3 w-3 rounded-full ${statusColor(selected.status)}`} />}
+                    label="Status"
+                    value={selected.status}
+                  />
                 </div>
 
-                {/* User ID */}
+                {/* Host info */}
                 <div className="rounded-md neon-border bg-card p-4">
-                  <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-primary">User ID</span>
-                  <p className="font-mono-cyber text-xs text-foreground/80 mt-1 break-all">{selected.user_id}</p>
+                  <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-primary">Host</span>
+                  <div className="mt-1 space-y-1">
+                    <p className="font-mono-cyber text-xs text-foreground/80 flex items-center gap-1.5">
+                      <Server className="h-3 w-3 text-muted-foreground" />
+                      {selected.netherhosts?.name ?? selected.host_id}
+                    </p>
+                    <p className="font-mono-cyber text-[10px] text-muted-foreground break-all">
+                      Host ID: {selected.host_id}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Daemon ref & version */}
+                <div className="grid grid-cols-2 gap-3">
+                  <InfoBlock icon={<Globe className="h-3.5 w-3.5" />} label="Daemon Ref" value={selected.daemon_ref ?? "—"} mono />
+                  <InfoBlock icon={<Hash className="h-3.5 w-3.5" />} label="Version" value={selected.version ?? "—"} />
+                </div>
+
+                {/* URLs */}
+                <div className="rounded-md neon-border bg-card p-4 space-y-2">
+                  <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-primary">Service URLs</span>
+                  <UrlRow label="Invoke" url={selected.invoke_url} />
+                  <UrlRow label="Status" url={selected.status_url} />
+                  <UrlRow label="Sigil" url={selected.sigil_url} />
+                  <UrlRow label="MCP" url={selected.mcp_url} />
                 </div>
 
                 {/* Capabilities */}
@@ -164,12 +198,9 @@ const DaemonsCatalogue = () => {
                   )}
                 </div>
 
-                {/* Deleted at */}
-                {selected.deleted_at && (
-                  <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
-                    <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-destructive">Eliminado</span>
-                    <p className="font-mono-cyber text-xs text-destructive mt-1">{formatDate(selected.deleted_at)}</p>
-                  </div>
+                {/* Last seen */}
+                {selected.last_seen_at && (
+                  <InfoBlock icon={<Clock className="h-3.5 w-3.5" />} label="Último contacto" value={formatDate(selected.last_seen_at)} />
                 )}
               </div>
             </>
@@ -187,6 +218,18 @@ const InfoBlock = ({ icon, label, value, mono }: { icon: React.ReactNode; label:
       <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
     </div>
     <p className={`text-xs text-foreground/80 ${mono ? "font-mono-cyber break-all" : ""}`}>{value}</p>
+  </div>
+);
+
+const UrlRow = ({ label, url }: { label: string; url: string | null }) => (
+  <div className="flex items-center gap-2">
+    <Link className="h-3 w-3 text-muted-foreground shrink-0" />
+    <span className="font-mono-cyber text-[10px] text-muted-foreground w-12 shrink-0">{label}</span>
+    {url ? (
+      <span className="font-mono-cyber text-xs text-foreground/80 break-all">{url}</span>
+    ) : (
+      <span className="text-xs text-muted-foreground italic">—</span>
+    )}
   </div>
 );
 
