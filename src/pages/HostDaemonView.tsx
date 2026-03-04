@@ -219,33 +219,61 @@ const HostDaemonView = () => {
 
   return (
     <div className="flex h-full flex-col md:flex-row overflow-hidden">
-      {/* Left: Avatar */}
-      <div className="flex shrink-0 items-center justify-center border-b border-border bg-card p-8 md:w-1/3 md:border-b-0 md:border-r">
-        {avatarSrc && !avatarError ? (
-          isVideo ? (
-            <video
-              src={avatarSrc}
-              className="h-48 w-48 rounded-sm object-cover md:h-64 md:w-64"
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
+      {/* Left: Avatar with glitch effect */}
+      <div className="flex shrink-0 items-center justify-center border-b border-border bg-card p-8 md:w-1/3 md:border-b-0 md:border-r relative overflow-hidden">
+        {/* Scanline sweep */}
+        <div
+          className="absolute inset-x-0 h-20 pointer-events-none"
+          style={{
+            background: daemon.status === "running"
+              ? "linear-gradient(180deg, transparent, rgba(0,255,170,0.07), transparent)"
+              : daemon.status === "error"
+              ? "linear-gradient(180deg, transparent, rgba(255,0,128,0.07), transparent)"
+              : "linear-gradient(180deg, transparent, rgba(0,240,255,0.07), transparent)",
+            animation: "card-scan 1.8s ease-in-out infinite",
+            opacity: 0.8,
+          }}
+        />
+
+        {/* Corner brackets */}
+        {(() => {
+          const c = daemon.status === "running" ? "var(--neon-green)" : daemon.status === "error" ? "var(--neon-pink)" : "var(--neon-cyan)";
+          return (
+            <>
+              <span className="card-corner tl" style={{ borderColor: c }} />
+              <span className="card-corner tr" style={{ borderColor: c }} />
+              <span className="card-corner bl" style={{ borderColor: c }} />
+              <span className="card-corner br" style={{ borderColor: c }} />
+            </>
+          );
+        })()}
+
+        <div className="glitch-avatar relative">
+          {avatarSrc && !avatarError ? (
+            isVideo ? (
+              <>
+                <video src={avatarSrc} className="glitch-main h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" autoPlay loop muted playsInline />
+                <video src={avatarSrc} className="glitch-r h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" autoPlay loop muted playsInline />
+                <video src={avatarSrc} className="glitch-g h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" autoPlay loop muted playsInline />
+                <video src={avatarSrc} className="glitch-b h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" autoPlay loop muted playsInline />
+              </>
+            ) : (
+              <>
+                <img src={avatarSrc} alt={daemon.name} className="glitch-main h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" onError={() => setAvatarError(true)} />
+                <img src={avatarSrc} alt="" className="glitch-r h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+                <img src={avatarSrc} alt="" className="glitch-g h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+                <img src={avatarSrc} alt="" className="glitch-b h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+              </>
+            )
           ) : (
-            <img
-              src={avatarSrc}
-              alt={daemon.name}
-              className="h-48 w-48 rounded-sm object-cover md:h-64 md:w-64"
-              onError={() => setAvatarError(true)}
-            />
-          )
-        ) : (
-          <img
-            src={placeholderSrc}
-            alt={daemon.name}
-            className="h-48 w-48 rounded-sm object-cover md:h-64 md:w-64"
-          />
-        )}
+            <>
+              <img src={placeholderSrc} alt={daemon.name} className="glitch-main h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+              <img src={placeholderSrc} alt="" className="glitch-r h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+              <img src={placeholderSrc} alt="" className="glitch-g h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+              <img src={placeholderSrc} alt="" className="glitch-b h-48 w-48 rounded-sm object-cover md:h-64 md:w-64" />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Right: Info */}
