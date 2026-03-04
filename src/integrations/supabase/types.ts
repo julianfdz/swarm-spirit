@@ -129,7 +129,7 @@ export type Database = {
             foreignKeyName: "events_source_daemon_id_fkey"
             columns: ["source_daemon_id"]
             isOneToOne: false
-            referencedRelation: "daemons"
+            referencedRelation: "host_daemons"
             referencedColumns: ["id"]
           },
           {
@@ -195,49 +195,61 @@ export type Database = {
       }
       host_daemons: {
         Row: {
-          daemon_id: string
+          capabilities: Json | null
+          daemon_id: string | null
           daemon_ref: string | null
+          description: string | null
           disabled: boolean
           host_id: string
           id: string
           invoke_url: string | null
           last_seen_at: string | null
           mcp_url: string | null
+          name: string
           sigil_url: string | null
           status: string
           status_url: string | null
           updated_at: string
           version: string | null
+          visibility: string
         }
         Insert: {
-          daemon_id: string
+          capabilities?: Json | null
+          daemon_id?: string | null
           daemon_ref?: string | null
+          description?: string | null
           disabled?: boolean
           host_id: string
           id?: string
           invoke_url?: string | null
           last_seen_at?: string | null
           mcp_url?: string | null
+          name: string
           sigil_url?: string | null
           status?: string
           status_url?: string | null
           updated_at?: string
           version?: string | null
+          visibility?: string
         }
         Update: {
-          daemon_id?: string
+          capabilities?: Json | null
+          daemon_id?: string | null
           daemon_ref?: string | null
+          description?: string | null
           disabled?: boolean
           host_id?: string
           id?: string
           invoke_url?: string | null
           last_seen_at?: string | null
           mcp_url?: string | null
+          name?: string
           sigil_url?: string | null
           status?: string
           status_url?: string | null
           updated_at?: string
           version?: string | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -395,7 +407,7 @@ export type Database = {
             foreignKeyName: "swarm_daemons_daemon_id_fkey"
             columns: ["daemon_id"]
             isOneToOne: false
-            referencedRelation: "daemons"
+            referencedRelation: "host_daemons"
             referencedColumns: ["id"]
           },
           {
@@ -511,7 +523,7 @@ export type Database = {
             foreignKeyName: "tasks_daemon_id_fkey"
             columns: ["daemon_id"]
             isOneToOne: false
-            referencedRelation: "daemons"
+            referencedRelation: "host_daemons"
             referencedColumns: ["id"]
           },
           {
@@ -525,7 +537,7 @@ export type Database = {
             foreignKeyName: "tasks_locked_by_fkey"
             columns: ["locked_by"]
             isOneToOne: false
-            referencedRelation: "daemons"
+            referencedRelation: "host_daemons"
             referencedColumns: ["id"]
           },
           {
