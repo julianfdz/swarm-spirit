@@ -25,12 +25,13 @@ const taskSchema = z.object({
 interface Props {
   swarmId?: string;
   onCreated?: () => void;
+  swarmDaemons?: { id: string; name: string; daemon_ref: string | null }[];
 }
 
 const METHODS = ["tasks/send", "tasks/sendSubscribe", "tasks/pushNotification"];
 const SOURCES = ["nethernet", "manual", "api", "webhook"];
 
-const CreateTaskDialog = ({ swarmId, onCreated }: Props) => {
+const CreateTaskDialog = ({ swarmId, onCreated, swarmDaemons }: Props) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [topic, setTopic] = useState("");
@@ -75,7 +76,7 @@ const CreateTaskDialog = ({ swarmId, onCreated }: Props) => {
       topic: topic.trim(),
       label: label.trim(),
       ...(swarmId ? { swarm_id: swarmId } : {}),
-      ...(daemonId.trim() ? { daemon_id: daemonId.trim() } : {}),
+      ...(daemonId.trim() && daemonId !== "__none__" ? { daemon_id: daemonId.trim() } : {}),
       method,
       payload,
       source,
@@ -189,13 +190,29 @@ const CreateTaskDialog = ({ swarmId, onCreated }: Props) => {
 
           {/* Daemon ID (optional) */}
           <div className="space-y-1.5">
-            <Label className="font-mono-cyber text-[10px] uppercase text-muted-foreground">Daemon ID (opcional)</Label>
-            <Input
-              value={daemonId}
-              onChange={(e) => setDaemonId(e.target.value)}
-              placeholder="uuid del daemon"
-              className="font-mono-cyber text-xs h-8"
-            />
+            <Label className="font-mono-cyber text-[10px] uppercase text-muted-foreground">Daemon (opcional)</Label>
+            {swarmDaemons && swarmDaemons.length > 0 ? (
+              <Select value={daemonId} onValueChange={setDaemonId}>
+                <SelectTrigger className="font-mono-cyber text-xs h-8">
+                  <SelectValue placeholder="Selecciona daemon" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__" className="font-mono-cyber text-xs text-muted-foreground">Ninguno</SelectItem>
+                  {swarmDaemons.map((d) => (
+                    <SelectItem key={d.id} value={d.id} className="font-mono-cyber text-xs">
+                      {d.name} {d.daemon_ref ? `(${d.daemon_ref})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={daemonId}
+                onChange={(e) => setDaemonId(e.target.value)}
+                placeholder="uuid del daemon"
+                className="font-mono-cyber text-xs h-8"
+              />
+            )}
           </div>
 
           {/* Method + Source row */}
