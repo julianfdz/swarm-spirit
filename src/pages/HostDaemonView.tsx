@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Bot, Eye, EyeOff, Server, Hash, Globe, Clock, Calendar,
-  Link as LinkIcon, RefreshCw, Loader2, ScanSearch, Play, Square, RotateCw, Send,
+  Link as LinkIcon, RefreshCw, Loader2, ScanSearch, Play, Square, RotateCw, Send, Plus, X, Users,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 import daemonScraper from "@/assets/daemon-scraper.png";
@@ -30,7 +31,7 @@ type HostDaemon = Tables<"host_daemons"> & {
   netherhosts?: { name: string; host_url: string | null } | null;
 };
 
-type Tab = "info" | "sigil" | "capabilities" | "urls" | "status";
+type Tab = "info" | "sigil" | "capabilities" | "urls" | "status" | "swarms";
 
 const HostDaemonView = () => {
   const { daemonId } = useParams<{ daemonId: string }>();
@@ -42,6 +43,11 @@ const HostDaemonView = () => {
   const [sigilData, setSigilData] = useState<Record<string, unknown> | null>(null);
   const [sigilLoading, setSigilLoading] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [assignedSwarms, setAssignedSwarms] = useState<{ id: string; name: string; description: string | null }[]>([]);
+  const [userSwarms, setUserSwarms] = useState<{ id: string; name: string; description: string | null }[]>([]);
+  const [swarmsLoading, setSwarmsLoading] = useState(false);
+  const [addSwarmOpen, setAddSwarmOpen] = useState(false);
+  const [addingSwarmId, setAddingSwarmId] = useState<string | null>(null);
 
   // Fetch daemon data
   useEffect(() => {
@@ -118,12 +124,72 @@ const HostDaemonView = () => {
     unknown: "bg-muted-foreground",
   };
 
+  // Fetch swarms this daemon belongs to
+  const fetchAssignedSwarms = async () => {
+    if (!daemonId) return;
+    setSwarmsLoading(true);
+    const { data } = await supabase
+      .from("swarm_daemons")
+      .select("swarm_id, swarms(id, name, description)")
+      .eq("daemon_id", daemonId);
+    const swarms = (data ?? [])
+      .map((sd: any) => sd.swarms)
+      .filter(Boolean);
+    setAssignedSwarms(swarms);
+    setSwarmsLoading(false);
+  };
+
+  useEffect(() => { fetchAssignedSwarms(); }, [daemonId]);
+
+  // Fetch user's swarms for the add dialog
+  const fetchUserSwarms = async () => {
+    if (!session?.user?.id) return;
+    const { data } = await supabase
+      .from("swarms")
+      .select("id, name, description")
+      .eq("user_id", session.user.id)
+      .order("name");
+    setUserSwarms(data ?? []);
+  };
+
+  const handleAddToSwarm = async (swarmId: string) => {
+    if (!daemonId) return;
+    setAddingSwarmId(swarmId);
+    const { error } = await supabase
+      .from("swarm_daemons")
+      .insert({ swarm_id: swarmId, daemon_id: daemonId });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Asignado", description: "Daemon añadido al swarm correctamente." });
+      await fetchAssignedSwarms();
+      setAddSwarmOpen(false);
+    }
+    setAddingSwarmId(null);
+  };
+
+  const handleRemoveFromSwarm = async (swarmId: string) => {
+    if (!daemonId) return;
+    const { error } = await supabase
+      .from("swarm_daemons")
+      .delete()
+      .eq("swarm_id", swarmId)
+      .eq("daemon_id", daemonId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Eliminado", description: "Daemon eliminado del swarm." });
+      await fetchAssignedSwarms();
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "info", label: "Info" },
     { key: "capabilities", label: "Capabilities" },
     { key: "urls", label: "URLs" },
     { key: "sigil", label: "Sigil" },
     { key: "status", label: "Estado" },
+    { key: "swarms", label: "Swarms" },
   ];
 
   if (loading) {
@@ -378,6 +444,92 @@ const HostDaemonView = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {tab === "swarms" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-primary">Swarms asignados</h3>
+                <Dialog open={addSwarmOpen} onOpenChange={(open) => {
+                  setAddSwarmOpen(open);
+                  if (open) fetchUserSwarms();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1.5 font-mono-cyber text-xs">
+                      <Plus className="h-3.5 w-3.5" /> Añadir a swarm
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle className="font-mono-cyber">Añadir daemon a swarm</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {userSwarms.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">No tienes swarms creados.</p>
+                      )}
+                      {userSwarms
+                        .filter((s) => !assignedSwarms.some((as) => as.id === s.id))
+                        .map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => handleAddToSwarm(s.id)}
+                            disabled={addingSwarmId === s.id}
+                            className="w-full flex items-center justify-between rounded-md neon-border bg-card p-3 hover:bg-accent/50 transition-colors text-left"
+                          >
+                            <div>
+                              <p className="font-mono-cyber text-sm text-foreground">{s.name}</p>
+                              {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
+                            </div>
+                            {addingSwarmId === s.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            ) : (
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        ))}
+                      {userSwarms.length > 0 && userSwarms.every((s) => assignedSwarms.some((as) => as.id === s.id)) && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Este daemon ya está en todos tus swarms.</p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {swarmsLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                </div>
+              ) : assignedSwarms.length === 0 ? (
+                <div className="rounded-md neon-border bg-card p-8 text-center">
+                  <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Este daemon no está asignado a ningún swarm.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {assignedSwarms.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded-md neon-border bg-card p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                      onClick={() => navigate(`/swarms/${s.id}`)}
+                    >
+                      <div>
+                        <p className="font-mono-cyber text-sm text-foreground">{s.name}</p>
+                        {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveFromSwarm(s.id); }}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
