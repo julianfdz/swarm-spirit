@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, Eye, EyeOff, RefreshCw, Calendar, Clock, Hash, Server, Globe, Link } from "lucide-react";
+import { Bot, Eye, EyeOff, RefreshCw, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 import daemonScraper from "@/assets/daemon-scraper.png";
@@ -32,9 +26,9 @@ type HostDaemon = Tables<"host_daemons"> & {
 };
 
 const DaemonsCatalogue = () => {
+  const navigate = useNavigate();
   const [daemons, setDaemons] = useState<HostDaemon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<HostDaemon | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -91,7 +85,7 @@ const DaemonsCatalogue = () => {
           {daemons.map((daemon, i) => (
             <button
               key={daemon.id}
-              onClick={() => setSelected(daemon)}
+              onClick={() => navigate(`/daemons/${daemon.id}`)}
               className="group relative flex flex-col items-center border border-border bg-card p-5 transition-all hover:neon-glow hover:z-10"
             >
               <img src={getAvatar(i)} alt={daemon.name} className="mb-3 h-24 w-24 rounded-sm object-cover" />
@@ -121,116 +115,8 @@ const DaemonsCatalogue = () => {
         </div>
       )}
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          {selected && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center gap-4">
-                  <img
-                    src={getAvatar(daemons.indexOf(selected))}
-                    alt={selected.name}
-                    className="h-16 w-16 rounded-sm object-cover shrink-0"
-                  />
-                  <div>
-                    <DialogTitle className="font-mono-cyber text-lg">{selected.name}</DialogTitle>
-                    <DialogDescription>{selected.description || "Sin descripción"}</DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-
-              <div className="space-y-5 mt-4">
-                {/* Metadata grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  <InfoBlock icon={<Hash className="h-3.5 w-3.5" />} label="ID" value={selected.id} mono />
-                  <InfoBlock
-                    icon={selected.visibility === "public" ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    label="Visibilidad"
-                    value={selected.visibility}
-                  />
-                  <InfoBlock icon={<Calendar className="h-3.5 w-3.5" />} label="Actualizado" value={formatDate(selected.updated_at)} />
-                  <InfoBlock
-                    icon={<div className={`h-3 w-3 rounded-full ${statusColor(selected.status)}`} />}
-                    label="Status"
-                    value={selected.status}
-                  />
-                </div>
-
-                {/* Host info */}
-                <div className="rounded-md neon-border bg-card p-4">
-                  <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-primary">Host</span>
-                  <div className="mt-1 space-y-1">
-                    <p className="font-mono-cyber text-xs text-foreground/80 flex items-center gap-1.5">
-                      <Server className="h-3 w-3 text-muted-foreground" />
-                      {selected.netherhosts?.name ?? selected.host_id}
-                    </p>
-                    <p className="font-mono-cyber text-[10px] text-muted-foreground break-all">
-                      Host ID: {selected.host_id}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Daemon ref & version */}
-                <div className="grid grid-cols-2 gap-3">
-                  <InfoBlock icon={<Globe className="h-3.5 w-3.5" />} label="Daemon Ref" value={selected.daemon_ref ?? "—"} mono />
-                  <InfoBlock icon={<Hash className="h-3.5 w-3.5" />} label="Version" value={selected.version ?? "—"} />
-                </div>
-
-                {/* URLs */}
-                <div className="rounded-md neon-border bg-card p-4 space-y-2">
-                  <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-primary">Service URLs</span>
-                  <UrlRow label="Invoke" url={selected.invoke_url} />
-                  <UrlRow label="Status" url={selected.status_url} />
-                  <UrlRow label="Sigil" url={selected.sigil_url} />
-                  <UrlRow label="MCP" url={selected.mcp_url} />
-                </div>
-
-                {/* Capabilities */}
-                <div className="rounded-md neon-border bg-card p-4">
-                  <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-primary">Capabilities</span>
-                  {selected.capabilities && Object.keys(selected.capabilities as object).length > 0 ? (
-                    <pre className="font-mono-cyber text-xs text-foreground/80 mt-2 whitespace-pre-wrap overflow-x-auto">
-                      {JSON.stringify(selected.capabilities, null, 2)}
-                    </pre>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-1 italic">Sin capabilities configuradas</p>
-                  )}
-                </div>
-
-                {/* Last seen */}
-                {selected.last_seen_at && (
-                  <InfoBlock icon={<Clock className="h-3.5 w-3.5" />} label="Último contacto" value={formatDate(selected.last_seen_at)} />
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </main>
   );
 };
-
-const InfoBlock = ({ icon, label, value, mono }: { icon: React.ReactNode; label: string; value: string; mono?: boolean }) => (
-  <div className="rounded-md neon-border bg-card p-3">
-    <div className="flex items-center gap-1.5 mb-1">
-      <span className="text-primary">{icon}</span>
-      <span className="font-mono-cyber text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
-    </div>
-    <p className={`text-xs text-foreground/80 ${mono ? "font-mono-cyber break-all" : ""}`}>{value}</p>
-  </div>
-);
-
-const UrlRow = ({ label, url }: { label: string; url: string | null }) => (
-  <div className="flex items-center gap-2">
-    <Link className="h-3 w-3 text-muted-foreground shrink-0" />
-    <span className="font-mono-cyber text-[10px] text-muted-foreground w-12 shrink-0">{label}</span>
-    {url ? (
-      <span className="font-mono-cyber text-xs text-foreground/80 break-all">{url}</span>
-    ) : (
-      <span className="text-xs text-muted-foreground italic">—</span>
-    )}
-  </div>
-);
 
 export default DaemonsCatalogue;
