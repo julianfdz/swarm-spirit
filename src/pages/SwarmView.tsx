@@ -3,10 +3,30 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { swarms as mockSwarms, Daemon } from "@/data/mockData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import EventStream from "@/components/EventStream";
 import TaskPool from "@/components/TaskPool";
+import type { Tables } from "@/integrations/supabase/types";
+
+import daemonScraper from "@/assets/daemon-scraper.png";
+import daemonWriter from "@/assets/daemon-writer.png";
+import daemonPublisher from "@/assets/daemon-publisher.png";
+import daemonProgrammer from "@/assets/daemon-programmer.png";
+import daemonAnalyst from "@/assets/daemon-analyst.png";
+import daemonSupport from "@/assets/daemon-support.png";
+import daemonSocial from "@/assets/daemon-social.png";
+import daemonScheduler from "@/assets/daemon-scheduler.png";
+
+const placeholders = [
+  daemonScraper, daemonWriter, daemonPublisher, daemonProgrammer,
+  daemonAnalyst, daemonSupport, daemonSocial, daemonScheduler,
+];
 
 type SwarmTab = "daemons" | "event-stream" | "task-pool";
+
+type HostDaemon = Tables<"host_daemons"> & {
+  netherhosts?: { name: string; host_url: string | null } | null;
+};
 
 const statusBadge = (status: Daemon["status"]) => {
   const styles = {
@@ -22,14 +42,31 @@ const statusBadge = (status: Daemon["status"]) => {
   );
 };
 
+const statusColor = (s: string) => {
+  if (s === "running") return "bg-neon-success";
+  if (s === "stopped") return "bg-neon-error";
+  return "bg-muted-foreground";
+};
+
+const resolveAvatarUrl = (d: HostDaemon) => {
+  if (!d.avatar_url) return null;
+  const raw = d.avatar_url;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const hostBase = (d.netherhosts?.host_url ?? "").replace(/\/+$/, "");
+  const full = hostBase ? `${hostBase}${raw.startsWith("/") ? "" : "/"}${raw}` : null;
+  return full ? encodeURI(decodeURI(full)) : null;
+};
+
+const isVideoUrl = (url: string) => /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
+
 const SwarmView = () => {
   const { swarmId } = useParams();
   const navigate = useNavigate();
   const [tab, setTab] = useState<SwarmTab>("daemons");
   const [loading, setLoading] = useState(true);
   const [dbSwarm, setDbSwarm] = useState<{ id: string; name: string; description: string | null } | null>(null);
+  const [realDaemons, setRealDaemons] = useState<HostDaemon[]>([]);
 
-  // Check mock swarms first
   const mockSwarm = mockSwarms.find((s) => s.id === swarmId);
 
   useEffect(() => {
@@ -37,7 +74,7 @@ const SwarmView = () => {
       setLoading(false);
       return;
     }
-    const fetch = async () => {
+    const fetchSwarm = async () => {
       const { data } = await supabase
         .from("swarms")
         .select("*")
@@ -46,7 +83,23 @@ const SwarmView = () => {
       setDbSwarm(data);
       setLoading(false);
     };
-    fetch();
+    fetchSwarm();
+  }, [swarmId, mockSwarm]);
+
+  // Fetch real daemons assigned to this swarm
+  useEffect(() => {
+    if (!swarmId || mockSwarm) return;
+    const fetchDaemons = async () => {
+      const { data } = await supabase
+        .from("swarm_daemons")
+        .select("daemon_id, host_daemons:daemon_id(*, netherhosts(name, host_url))")
+        .eq("swarm_id", swarmId);
+      const daemons = (data ?? [])
+        .map((sd: any) => sd.host_daemons)
+        .filter(Boolean) as HostDaemon[];
+      setRealDaemons(daemons);
+    };
+    fetchDaemons();
   }, [swarmId, mockSwarm]);
 
   if (loading) {
@@ -90,7 +143,6 @@ const SwarmView = () => {
         <p className="mt-1 text-sm text-muted-foreground">{swarm.description}</p>
       </div>
 
-      {/* Tabs */}
       <div className="mb-6 flex gap-1 border-b border-border">
         {tabs.map((t) => (
           <button
@@ -107,7 +159,7 @@ const SwarmView = () => {
         ))}
       </div>
 
-      {/* Daemons Grid */}
+      {/* Mock daemons */}
       {tab === "daemons" && isMock && mockSwarm && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {mockSwarm.daemons.map((daemon) => (
@@ -116,11 +168,7 @@ const SwarmView = () => {
               onClick={() => navigate(`/swarms/${swarmId}/daemon/${daemon.id}`)}
               className="group relative flex flex-col items-center border border-border bg-card p-4 transition-all hover:neon-glow hover:z-10"
             >
-              <img
-                src={daemon.avatar}
-                alt={daemon.name}
-                className="mb-3 h-24 w-24 rounded-sm object-cover"
-              />
+              <img src={daemon.avatar} alt={daemon.name} className="mb-3 h-24 w-24 rounded-sm object-cover" />
               {statusBadge(daemon.status)}
               <h4 className="mt-2 font-mono-cyber text-xs tracking-wide text-foreground group-hover:text-primary transition-colors text-center">
                 {daemon.name}
@@ -132,16 +180,50 @@ const SwarmView = () => {
         </div>
       )}
 
+      {/* Real daemons from DB */}
       {tab === "daemons" && !isMock && (
-        <div className="text-center py-12">
-          <p className="text-sm text-muted-foreground">No hay daemons asignados a este swarm todavía.</p>
-        </div>
+        realDaemons.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm text-muted-foreground">No hay daemons asignados a este swarm todavía.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {realDaemons.map((daemon, i) => {
+              const avatarUrl = resolveAvatarUrl(daemon);
+              return (
+                <button
+                  key={daemon.id}
+                  onClick={() => navigate(`/daemons/${daemon.id}`)}
+                  className="group relative flex flex-col items-center border border-border bg-card p-4 transition-all hover:neon-glow hover:z-10"
+                >
+                  {avatarUrl && isVideoUrl(avatarUrl) ? (
+                    <video src={avatarUrl} className="mb-3 h-24 w-24 rounded-sm object-cover" autoPlay loop muted playsInline />
+                  ) : (
+                    <img
+                      src={avatarUrl ?? placeholders[i % placeholders.length]}
+                      alt={daemon.name}
+                      className="mb-3 h-24 w-24 rounded-sm object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).src = placeholders[i % placeholders.length]; }}
+                    />
+                  )}
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`h-2 w-2 rounded-full ${statusColor(daemon.status)}`} />
+                    <Badge variant="outline" className="font-mono-cyber text-[10px]">{daemon.status}</Badge>
+                  </div>
+                  <h4 className="mt-1 font-mono-cyber text-xs tracking-wide text-foreground group-hover:text-primary transition-colors text-center">
+                    {daemon.name}
+                  </h4>
+                  {daemon.description && (
+                    <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2 text-center">{daemon.description}</p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )
       )}
 
-      {/* Event Stream */}
       {tab === "event-stream" && <EventStream swarmId={swarmId!} />}
-
-      {/* Task Pool */}
       {tab === "task-pool" && <TaskPool swarmId={swarmId!} />}
     </main>
   );
