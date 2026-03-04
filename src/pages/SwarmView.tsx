@@ -135,7 +135,7 @@ const SwarmView = () => {
   ];
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10 md:px-12">
+    <main className="mx-auto max-w-5xl px-6 py-10 md:px-12 animate-in fade-in duration-200">
       <button
         onClick={() => navigate("/swarms")}
         className="mb-6 font-mono-cyber text-xs text-muted-foreground hover:text-primary transition-colors"
