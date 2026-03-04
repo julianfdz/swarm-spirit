@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { getTasksForSwarm, PoolTask, TaskStatus, TaskPriority } from "@/data/taskPoolData";
 import CreateTaskDialog from "@/components/CreateTaskDialog";
+import TaskDetailDialog from "@/components/TaskDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { RotateCw, X, CornerDownLeft, Skull, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 
@@ -40,9 +41,10 @@ function getPoolTagColor(type: string, status: TaskStatus): string {
   }
 }
 
-function dbTaskToPoolTask(t: any): PoolTask {
+function dbTaskToPoolTask(t: any): PoolTask & { fullId: string } {
   return {
     id: t.id?.slice(0, 6) || t.id,
+    fullId: t.id,
     type: t.type || "",
     label: t.label || "",
     status: (t.status as TaskStatus) || "pending",
@@ -52,7 +54,7 @@ function dbTaskToPoolTask(t: any): PoolTask {
     createdAt: t.created_at || "",
     updatedAt: t.updated_at || "",
     lockedBy: t.locked_by || null,
-    lockedByName: null, // Could resolve daemon name later
+    lockedByName: null,
     correlationId: t.correlation_id || null,
     error: t.error || null,
     poolX: Math.random() * 80 + 5,
@@ -88,6 +90,7 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
   const [viewMode, setViewMode] = useState<ViewMode>("pool");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [selectedTaskFullId, setSelectedTaskFullId] = useState<string | null>(null);
 
   const filteredTasks = useMemo(() => {
     if (statusFilter === "all") return allTasks;
@@ -251,7 +254,8 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
             const sc = statusConfig[task.status];
             const pc = priorityConfig[task.priority];
             return (
-              <div key={task.id} className="rounded-md border border-border bg-card overflow-hidden">
+              <div key={task.id} className="rounded-md border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/30 transition-colors"
+                onClick={() => setSelectedTaskFullId((task as any).fullId || task.id)}>
                 {/* Main row */}
                 <div className="flex items-center gap-2 px-3 py-2">
                   <button onClick={() => toggleExpand(task.id)} className="text-muted-foreground hover:text-foreground shrink-0">
@@ -343,6 +347,8 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
           })}
         </div>
       )}
+
+      <TaskDetailDialog taskId={selectedTaskFullId} onClose={() => setSelectedTaskFullId(null)} />
     </div>
   );
 };
