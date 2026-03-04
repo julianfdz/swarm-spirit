@@ -64,9 +64,9 @@ const TaskDetailView = () => {
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const fetchAll = async () => {
+  const fetchAll = async (showLoading = false) => {
     if (!taskId) return;
-    setLoadingDb(true);
+    if (showLoading) setLoadingDb(true);
     const { data } = await supabase.from("tasks").select("*").eq("id", taskId).maybeSingle();
     setDbTask(data);
     setEditedFields({});
@@ -109,7 +109,7 @@ const TaskDetailView = () => {
     }
   };
 
-  useEffect(() => { fetchAll(); }, [taskId]);
+  useEffect(() => { fetchAll(!dbTask); }, [taskId]);
 
   const handleFieldChange = (key: string, value: any) => {
     setEditedFields((prev) => ({ ...prev, [key]: value }));
@@ -211,7 +211,7 @@ const TaskDetailView = () => {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchAll} className="font-mono-cyber text-[10px] uppercase gap-1">
+          <Button variant="outline" size="sm" onClick={() => fetchAll()} className="font-mono-cyber text-[10px] uppercase gap-1">
             <RefreshCw className={`h-3 w-3 ${loadingDb || loadingApi ? "animate-spin" : ""}`} /> Refrescar
           </Button>
           {hasChanges && (
