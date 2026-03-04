@@ -466,14 +466,19 @@ export type Database = {
           error: string | null
           host_id: string | null
           id: string
+          is_template: boolean
           label: string
+          last_run_at: string | null
           locked_by: string | null
           max_retries: number
           method: string | null
+          next_run_at: string | null
           payload: Json | null
           priority: string
           result: Json | null
           retries: number
+          schedule_type: string | null
+          schedule_value: string | null
           source: string | null
           status: string
           swarm_id: string | null
@@ -488,14 +493,19 @@ export type Database = {
           error?: string | null
           host_id?: string | null
           id?: string
+          is_template?: boolean
           label: string
+          last_run_at?: string | null
           locked_by?: string | null
           max_retries?: number
           method?: string | null
+          next_run_at?: string | null
           payload?: Json | null
           priority?: string
           result?: Json | null
           retries?: number
+          schedule_type?: string | null
+          schedule_value?: string | null
           source?: string | null
           status?: string
           swarm_id?: string | null
@@ -510,14 +520,19 @@ export type Database = {
           error?: string | null
           host_id?: string | null
           id?: string
+          is_template?: boolean
           label?: string
+          last_run_at?: string | null
           locked_by?: string | null
           max_retries?: number
           method?: string | null
+          next_run_at?: string | null
           payload?: Json | null
           priority?: string
           result?: Json | null
           retries?: number
+          schedule_type?: string | null
+          schedule_value?: string | null
           source?: string | null
           status?: string
           swarm_id?: string | null
