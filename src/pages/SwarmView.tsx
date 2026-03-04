@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import EventStream from "@/components/EventStream";
 import TaskPool from "@/components/TaskPool";
+import JobsList from "@/components/JobsList";
 import { DaemonCard } from "@/components/DaemonCard";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -23,7 +24,7 @@ const placeholders = [
   daemonAnalyst, daemonSupport, daemonSocial, daemonScheduler,
 ];
 
-type SwarmTab = "daemons" | "event-stream" | "task-pool";
+type SwarmTab = "daemons" | "event-stream" | "task-pool" | "jobs";
 
 type HostDaemon = Tables<"host_daemons"> & {
   netherhosts?: { name: string; host_url: string | null } | null;
@@ -130,6 +131,7 @@ const SwarmView = () => {
     { key: "daemons", label: "Daemons" },
     { key: "event-stream", label: "Event Stream" },
     { key: "task-pool", label: "Task Pool" },
+    { key: "jobs", label: "Jobs" },
   ];
 
   return (
@@ -217,6 +219,7 @@ const SwarmView = () => {
 
       {tab === "event-stream" && <EventStream swarmId={swarmId!} />}
       {tab === "task-pool" && <TaskPool swarmId={swarmId!} swarmDaemons={realDaemons.map(d => ({ id: d.id, name: d.name, daemon_ref: d.daemon_ref }))} />}
+      {tab === "jobs" && <JobsList swarmId={swarmId!} />}
     </main>
   );
 };

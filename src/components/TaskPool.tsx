@@ -11,7 +11,7 @@ interface Props {
 }
 
 type ViewMode = "list" | "pool";
-type StatusFilter = "all" | TaskStatus;
+type StatusFilter = "all" | TaskStatus | "scheduled" | "cancelled";
 
 const statusConfig: Record<string, { label: string; class: string; dotClass: string }> = {
   pending: { label: "Pending", class: "bg-neon-warning/15 text-neon-warning", dotClass: "bg-neon-warning" },
@@ -119,6 +119,7 @@ const TaskPool = ({ swarmId, swarmDaemons }: Props) => {
     { key: "all", label: `All (${counts.all || 0})` },
     { key: "pending", label: `Pending (${counts.pending || 0})` },
     { key: "in_progress", label: `Active (${counts.in_progress || 0})` },
+    { key: "scheduled", label: `Scheduled (${counts.scheduled || 0})` },
     { key: "failed", label: `Failed (${counts.failed || 0})` },
     { key: "dlq", label: `DLQ (${counts.dlq || 0})` },
     { key: "completed", label: `Done (${counts.completed || 0})` },
