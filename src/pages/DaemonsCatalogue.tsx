@@ -43,7 +43,18 @@ const DaemonsCatalogue = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const getAvatar = (index: number) => mockAvatars[index % mockAvatars.length];
+  const getPlaceholder = (index: number) => mockAvatars[index % mockAvatars.length];
+
+  const resolveAvatarUrl = (d: HostDaemon) => {
+    if (!d.avatar_url) return null;
+    const raw = d.avatar_url;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const hostBase = d.netherhosts?.host_url?.replace(/\/+$/, "") ?? "";
+    const full = hostBase ? `${hostBase}${raw.startsWith("/") ? "" : "/"}${raw}` : null;
+    return full ? encodeURI(decodeURI(full)) : null;
+  };
+
+  const isVideoUrl = (url: string) => /\.(mp4|webm|mov|ogg)(\?|$)/i.test(url);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("es-ES", {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
@@ -88,7 +99,27 @@ const DaemonsCatalogue = () => {
               onClick={() => navigate(`/daemons/${daemon.id}`)}
               className="group relative flex flex-col items-center border border-border bg-card p-5 transition-all hover:neon-glow hover:z-10"
             >
-              <img src={getAvatar(i)} alt={daemon.name} className="mb-3 h-24 w-24 rounded-sm object-cover" />
+              {(() => {
+                const avatarUrl = resolveAvatarUrl(daemon);
+                if (avatarUrl && isVideoUrl(avatarUrl)) {
+                  return (
+                    <video
+                      src={avatarUrl}
+                      className="mb-3 h-24 w-24 rounded-sm object-cover"
+                      autoPlay loop muted playsInline
+                      onError={(e) => { (e.target as HTMLVideoElement).style.display = 'none'; }}
+                    />
+                  );
+                }
+                return (
+                  <img
+                    src={avatarUrl ?? getPlaceholder(i)}
+                    alt={daemon.name}
+                    className="mb-3 h-24 w-24 rounded-sm object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = getPlaceholder(i); }}
+                  />
+                );
+              })()}
               <div className="flex items-center gap-2 mb-2">
                 <div className={`h-2 w-2 rounded-full ${statusColor(daemon.status)}`} />
                 <Badge variant="outline" className="font-mono-cyber text-[10px] gap-1">
