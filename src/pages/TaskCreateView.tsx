@@ -173,7 +173,7 @@ const TaskCreateView = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${selectedHost.token}`,
+          Authorization: `Bearer ${resolvedToken}`,
         },
         body: JSON.stringify(body),
       });
