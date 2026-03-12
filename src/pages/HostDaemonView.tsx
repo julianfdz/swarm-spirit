@@ -367,17 +367,6 @@ const HostDaemonView = () => {
                 </div>
               )}
 
-              {/* sigil_json stored in DB */}
-              {daemon.sigil_json && (
-                <>
-                  <h3 className="font-mono-cyber text-xs uppercase tracking-widest text-primary mb-3 mt-6">Sigil JSON (almacenado)</h3>
-                  <div className="rounded-md neon-border bg-card p-4 overflow-x-auto">
-                    <pre className="font-mono-cyber text-xs leading-relaxed text-foreground/80 whitespace-pre-wrap">
-                      {JSON.stringify(daemon.sigil_json, null, 2)}
-                    </pre>
-                  </div>
-                </>
-              )}
             </div>
           )}
 
