@@ -76,28 +76,30 @@ const TaskCreateView = () => {
   const [onceTime, setOnceTime] = useState("09:00");
 
   // Data
-  const [hosts, setHosts] = useState<{ id: string; name: string; token: string | null }[]>([]);
-  const [selectedHostId, setSelectedHostId] = useState("");
-  const [swarmDaemons, setSwarmDaemons] = useState<{ id: string; name: string; daemon_ref: string | null }[]>([]);
+  const [swarmDaemons, setSwarmDaemons] = useState<{ id: string; name: string; daemon_ref: string | null; host_id: string; host_name: string; host_token: string | null }[]>([]);
   const [swarmName, setSwarmName] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: hostsData } = await supabase.from("netherhosts").select("id, name, token");
-      if (hostsData) {
-        setHosts(hostsData);
-        if (hostsData.length > 0) setSelectedHostId(hostsData[0].id);
-      }
-
       if (swarmId) {
         const { data: swarm } = await supabase.from("swarms").select("name").eq("id", swarmId).maybeSingle();
         if (swarm) setSwarmName(swarm.name);
 
         const { data: sd } = await supabase
           .from("swarm_daemons")
-          .select("daemon_id, host_daemons:daemon_id(id, name, daemon_ref)")
+          .select("daemon_id, host_daemons:daemon_id(id, name, daemon_ref, host_id, netherhosts(name, token))")
           .eq("swarm_id", swarmId);
-        const daemons = (sd ?? []).map((r: any) => r.host_daemons).filter(Boolean);
+        const daemons = (sd ?? [])
+          .map((r: any) => r.host_daemons)
+          .filter(Boolean)
+          .map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            daemon_ref: d.daemon_ref,
+            host_id: d.host_id,
+            host_name: d.netherhosts?.name ?? "—",
+            host_token: d.netherhosts?.token ?? null,
+          }));
         setSwarmDaemons(daemons);
       }
     };
