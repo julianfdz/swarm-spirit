@@ -76,6 +76,10 @@ const SwarmView = () => {
   const [loading, setLoading] = useState(true);
   const [dbSwarm, setDbSwarm] = useState<{ id: string; name: string; description: string | null } | null>(null);
   const [realDaemons, setRealDaemons] = useState<HostDaemon[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const mockSwarm = mockSwarms.find((s) => s.id === swarmId);
 
@@ -112,6 +116,17 @@ const SwarmView = () => {
     fetchDaemons();
   }, [swarmId, mockSwarm]);
 
+  const swarm = mockSwarm ?? dbSwarm;
+  const isMock = !!mockSwarm;
+
+  // Sync edit fields when swarm data loads or dialog opens
+  useEffect(() => {
+    if (editOpen && swarm) {
+      setEditName(swarm.name);
+      setEditDesc(swarm.description ?? "");
+    }
+  }, [editOpen, swarm]);
+
   if (loading) {
     return (
       <main className="mx-auto max-w-5xl px-6 py-10 md:px-12 space-y-4">
@@ -121,8 +136,6 @@ const SwarmView = () => {
     );
   }
 
-  const swarm = mockSwarm ?? dbSwarm;
-
   if (!swarm) {
     return (
       <div className="flex min-h-[calc(100vh-57px)] items-center justify-center">
@@ -130,14 +143,6 @@ const SwarmView = () => {
       </div>
     );
   }
-
-  const isMock = !!mockSwarm;
-
-  // Edit swarm state
-  const [editOpen, setEditOpen] = useState(false);
-  const [editName, setEditName] = useState(swarm.name);
-  const [editDesc, setEditDesc] = useState(swarm.description ?? "");
-  const [saving, setSaving] = useState(false);
 
   const handleSaveEdit = async () => {
     if (!editName.trim() || isMock) return;
