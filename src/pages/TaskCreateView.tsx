@@ -139,9 +139,14 @@ const TaskCreateView = () => {
       return;
     }
 
-    const selectedHost = hosts.find((h) => h.id === selectedHostId);
-    if (!selectedHost?.token) {
-      toast({ title: "Sin token", description: "El host seleccionado no tiene token", variant: "destructive" });
+    // Resolve host token: from selected daemon or first available swarm daemon
+    const selectedDaemon = daemonId && daemonId !== "__none__"
+      ? swarmDaemons.find((d) => d.id === daemonId)
+      : null;
+    const resolvedToken = selectedDaemon?.host_token ?? swarmDaemons.find((d) => d.host_token)?.host_token ?? null;
+
+    if (!resolvedToken) {
+      toast({ title: "Sin token", description: "Ningún daemon del swarm tiene un host con token configurado", variant: "destructive" });
       return;
     }
 
