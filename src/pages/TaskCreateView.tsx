@@ -214,23 +214,6 @@ const TaskCreateView = () => {
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Host */}
-            <div className="space-y-1.5">
-              <Label className="font-mono-cyber text-[10px] uppercase text-muted-foreground">Host (auth) *</Label>
-              {hosts.length === 0 ? (
-                <p className="font-mono-cyber text-[10px] text-destructive">No hay hosts disponibles</p>
-              ) : (
-                <Select value={selectedHostId} onValueChange={setSelectedHostId}>
-                  <SelectTrigger className="font-mono-cyber text-xs"><SelectValue placeholder="Selecciona host" /></SelectTrigger>
-                  <SelectContent>
-                    {hosts.map((h) => (
-                      <SelectItem key={h.id} value={h.id} className="font-mono-cyber text-xs">{h.name} {h.token ? "" : "(sin token)"}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
             {/* Priority */}
             <div className="space-y-1.5">
               <Label className="font-mono-cyber text-[10px] uppercase text-muted-foreground">Prioridad</Label>
