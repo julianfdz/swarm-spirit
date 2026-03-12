@@ -133,6 +133,29 @@ const SwarmView = () => {
 
   const isMock = !!mockSwarm;
 
+  // Edit swarm state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState(swarm.name);
+  const [editDesc, setEditDesc] = useState(swarm.description ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim() || isMock) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("swarms")
+      .update({ name: editName.trim(), description: editDesc.trim() || null })
+      .eq("id", swarm.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setDbSwarm((prev) => prev ? { ...prev, name: editName.trim(), description: editDesc.trim() || null } : prev);
+      toast({ title: "Swarm actualizado" });
+      setEditOpen(false);
+    }
+    setSaving(false);
+  };
+
   const tabs: { key: SwarmTab; label: string }[] = [
     { key: "daemons", label: "Daemons" },
     { key: "event-stream", label: "Event Stream" },
@@ -149,9 +172,38 @@ const SwarmView = () => {
         ← Volver a swarms
       </button>
 
-      <div className="mb-6">
-        <h2 className="font-mono-cyber text-2xl tracking-wide text-foreground">{swarm.name}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{swarm.description}</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-mono-cyber text-2xl tracking-wide text-foreground">{swarm.name}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{swarm.description}</p>
+        </div>
+        {!isMock && (
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 font-mono-cyber text-xs">
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-mono-cyber">Editar Swarm</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="font-mono-cyber text-xs text-muted-foreground mb-1 block">Nombre</label>
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="font-mono-cyber" />
+                </div>
+                <div>
+                  <label className="font-mono-cyber text-xs text-muted-foreground mb-1 block">Descripción</label>
+                  <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} className="font-mono-cyber" />
+                </div>
+                <Button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="w-full font-mono-cyber">
+                  {saving ? "Guardando..." : "Guardar cambios"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="mb-6 flex gap-1 border-b border-border">
