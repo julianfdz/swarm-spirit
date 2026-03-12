@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { swarms as mockSwarms, Daemon } from "@/data/mockData";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Pencil } from "lucide-react";
 import EventStream from "@/components/EventStream";
 import TaskPool from "@/components/TaskPool";
 import JobsList from "@/components/JobsList";
@@ -70,6 +76,10 @@ const SwarmView = () => {
   const [loading, setLoading] = useState(true);
   const [dbSwarm, setDbSwarm] = useState<{ id: string; name: string; description: string | null } | null>(null);
   const [realDaemons, setRealDaemons] = useState<HostDaemon[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const mockSwarm = mockSwarms.find((s) => s.id === swarmId);
 
@@ -106,6 +116,17 @@ const SwarmView = () => {
     fetchDaemons();
   }, [swarmId, mockSwarm]);
 
+  const swarm = mockSwarm ?? dbSwarm;
+  const isMock = !!mockSwarm;
+
+  // Sync edit fields when swarm data loads or dialog opens
+  useEffect(() => {
+    if (editOpen && swarm) {
+      setEditName(swarm.name);
+      setEditDesc(swarm.description ?? "");
+    }
+  }, [editOpen, swarm]);
+
   if (loading) {
     return (
       <main className="mx-auto max-w-5xl px-6 py-10 md:px-12 space-y-4">
@@ -115,8 +136,6 @@ const SwarmView = () => {
     );
   }
 
-  const swarm = mockSwarm ?? dbSwarm;
-
   if (!swarm) {
     return (
       <div className="flex min-h-[calc(100vh-57px)] items-center justify-center">
@@ -125,7 +144,22 @@ const SwarmView = () => {
     );
   }
 
-  const isMock = !!mockSwarm;
+  const handleSaveEdit = async () => {
+    if (!editName.trim() || isMock) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("swarms")
+      .update({ name: editName.trim(), description: editDesc.trim() || null })
+      .eq("id", swarm.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setDbSwarm((prev) => prev ? { ...prev, name: editName.trim(), description: editDesc.trim() || null } : prev);
+      toast({ title: "Swarm actualizado" });
+      setEditOpen(false);
+    }
+    setSaving(false);
+  };
 
   const tabs: { key: SwarmTab; label: string }[] = [
     { key: "daemons", label: "Daemons" },
@@ -143,9 +177,38 @@ const SwarmView = () => {
         ← Volver a swarms
       </button>
 
-      <div className="mb-6">
-        <h2 className="font-mono-cyber text-2xl tracking-wide text-foreground">{swarm.name}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{swarm.description}</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-mono-cyber text-2xl tracking-wide text-foreground">{swarm.name}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{swarm.description}</p>
+        </div>
+        {!isMock && (
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 gap-1.5 font-mono-cyber text-xs">
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="font-mono-cyber">Editar Swarm</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="font-mono-cyber text-xs text-muted-foreground mb-1 block">Nombre</label>
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="font-mono-cyber" />
+                </div>
+                <div>
+                  <label className="font-mono-cyber text-xs text-muted-foreground mb-1 block">Descripción</label>
+                  <Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} className="font-mono-cyber" />
+                </div>
+                <Button onClick={handleSaveEdit} disabled={saving || !editName.trim()} className="w-full font-mono-cyber">
+                  {saving ? "Guardando..." : "Guardar cambios"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="mb-6 flex gap-1 border-b border-border">
